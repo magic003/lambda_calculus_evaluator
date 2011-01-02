@@ -1,0 +1,6 @@
+*.o
+*.swp
+main
+test
+lex.yy.c
+y.tab.*
