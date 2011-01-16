@@ -26,7 +26,8 @@ int main(int argc, char* argv[]) {
 
     char buff[BUFF_SIZE];
 
-    fprintf(out,"Welcome to Lambda Calculus Evaluator.\n\n");
+    fprintf(out,"Welcome to Lambda Calculus Evaluator.\n");
+    fprintf(out,"Press Ctrl+C to quit.\n\n");
     while(1) {
         fprintf(out,"> ");
         fgets(buff,BUFF_SIZE-1,in);

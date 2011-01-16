@@ -59,5 +59,29 @@ int main(int argc, char* argv[]) {
         deleteTreeNode(tree);
         tree=NULL;
     }
+
+    fprintf(out,"\nTest alpha conversion:\n");
+    const char * expr = "(lambda x (lambda x x))";
+    fprintf(out,"Expression: %s\n",expr);
+    yy_scan_string(expr);
+    yyparse();
+    tree = alphaConversion(tree);
+    fprintf(out,"\t->  ");
+    printExpression(tree);
+    fprintf(out,"\n");
+    deleteTreeNode(tree);
+    tree=NULL;
+
+    expr = "(lambda x (lambda y x))";
+    fprintf(out,"Expression: %s\n",expr);
+    yy_scan_string(expr);
+    yyparse();
+    tree = alphaConversion(tree);
+    fprintf(out,"\t->  ");
+    printExpression(tree);
+    fprintf(out,"\n");
+    deleteTreeNode(tree);
+    tree=NULL;
+
     return 0;
 }
