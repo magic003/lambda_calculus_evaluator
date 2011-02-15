@@ -114,7 +114,13 @@ void printExpression(TreeNode* expr) {
         case AppK:
             printExpression(expr->children[0]);
             fprintf(out," ");
+            if(expr->children[1]->kind==AppK) {
+                fprintf(out,"(");
+            }
             printExpression(expr->children[1]);
+            if(expr->children[1]->kind==AppK) {
+                fprintf(out,")");
+            }
             break;
         default:
             fprintf(out,"Unknown expression kind.\n");

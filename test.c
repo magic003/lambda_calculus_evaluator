@@ -41,10 +41,26 @@ int main(int argc, char* argv[]) {
                     "(lambda p p (lambda x (lambda y x)))",
                     "(lambda p p (lambda x (lambda y y)))",
                     "(lambda x (lambda y (lambda z y)))",
-                    "(lambda p (lambda x (lambda y (lambda a (lambda b b)))))"
+                    "(lambda p (lambda x (lambda y (lambda a (lambda b b)))))",
+                    "(x)",
+                    "((lambda x x))",
+                    "((x))",
+                    "((lambda x x) y)",
+                    "(x x)",
+                    "((x x))",
+                    "(((lambda x x) u) v)",
+                    "(u ((lambda x x) v))",
+                    "((lambda x x) ((lambda y y) z))",
+                    "(lambda f (lambda x f (f x)))",
+                    "(lambda f (lambda x f (f (f x))))",
+                    "(lambda n (lambda f (lambda x f (n f x))))",
+                    "(lambda m (lambda n (lambda f (lambda x m f (n f x)))))",
+                    "(lambda n (lambda f (lambda x n (lambda g (lambda h h (g f))) (lambda u x) (lambda u u))))",
+                    "(lambda g (lambda x g (x x)) (lambda x g (x x)))",
+                    "(lambda g (lambda x g (x x)) (lambda x g (x x))) g"
                     };
     int i;
-    for(i=0;i<26;i++) {
+    for(i=0;i<42;i++) {
         fprintf(out,"Expression: %s\n",exprs[i]);
         useStringBuffer(exprs[i]);
         yyparse();

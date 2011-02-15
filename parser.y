@@ -52,6 +52,10 @@ expression      : ID
                         $$->children[0] = $4;
                         $$->children[1] = $5;
                     }
+                | '(' expression_list ')'
+                    {
+                        $$ = $2;
+                    }
                 ;
 
 %%
