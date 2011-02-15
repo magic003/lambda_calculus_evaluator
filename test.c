@@ -46,7 +46,7 @@ int main(int argc, char* argv[]) {
     int i;
     for(i=0;i<26;i++) {
         fprintf(out,"Expression: %s\n",exprs[i]);
-        yy_scan_string(exprs[i]);
+        useStringBuffer(exprs[i]);
         yyparse();
         if(PARSE_DUMP) {
             printTree(tree);
@@ -58,30 +58,26 @@ int main(int argc, char* argv[]) {
         fprintf(out,"\n");
         deleteTreeNode(tree);
         tree=NULL;
+        deleteStringBuffer();
     }
 
-    fprintf(out,"\nTest alpha conversion:\n");
-    const char * expr = "(lambda x (lambda x x))";
-    fprintf(out,"Expression: %s\n",expr);
-    yy_scan_string(expr);
-    yyparse();
-    tree = alphaConversion(tree);
-    fprintf(out,"\t->  ");
-    printExpression(tree);
-    fprintf(out,"\n");
-    deleteTreeNode(tree);
-    tree=NULL;
+    char *exprs1[] = {"(lambda x (lambda x x))",
+            "(lambda x (lambda y x))"
+            };
 
-    expr = "(lambda x (lambda y x))";
-    fprintf(out,"Expression: %s\n",expr);
-    yy_scan_string(expr);
-    yyparse();
-    tree = alphaConversion(tree);
-    fprintf(out,"\t->  ");
-    printExpression(tree);
-    fprintf(out,"\n");
-    deleteTreeNode(tree);
-    tree=NULL;
+    fprintf(out,"\nTest alpha conversion:\n");
+    for(i=0;i<2;i++) {
+        fprintf(out,"Expression: %s\n",exprs1[i]);
+        useStringBuffer(exprs1[i]);
+        yyparse();
+        tree = alphaConversion(tree);
+        fprintf(out,"\t->  ");
+        printExpression(tree);
+        fprintf(out,"\n");
+        deleteTreeNode(tree);
+        tree=NULL;
+        deleteStringBuffer();
+    }
 
     return 0;
 }

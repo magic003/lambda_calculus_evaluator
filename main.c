@@ -31,7 +31,7 @@ int main(int argc, char* argv[]) {
     while(1) {
         fprintf(out,"> ");
         fgets(buff,BUFF_SIZE-1,in);
-        yy_scan_string(buff);
+        useStringBuffer(buff);
         yyparse();
         if(DEBUG) printTree(tree);
         
@@ -40,7 +40,7 @@ int main(int argc, char* argv[]) {
         printExpression(tree);
         deleteTreeNode(tree);
         tree=NULL;
-        yy_delete_buffer();
+        deleteStringBuffer();
         buff[0] = EOF;
         fprintf(out,"\n\n");
     }
