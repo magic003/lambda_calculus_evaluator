@@ -38,7 +38,7 @@ int main(int argc, char* argv[]) {
         tree = evaluate(tree);
         fprintf(out,"-> ");
         printExpression(tree);
-        deleteTreeNode(tree);
+        deleteTree(tree);
         tree=NULL;
         deleteStringBuffer();
         buff[0] = EOF;

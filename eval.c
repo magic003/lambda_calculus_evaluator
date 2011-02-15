@@ -65,11 +65,11 @@ static TreeNode *substitute(TreeNode *expr, TreeNode *var, TreeNode *sub) {
     }
     const char * parname = NULL;
     TreeNode * result = NULL;
-    int deleteSub = 0;
     switch(expr->kind) {
         case IdK:
             if(strcmp(expr->name,var->name)==0) {
-                return sub;
+                deleteTree(expr);
+                return duplicateTree(sub);
             }else {
                 return expr;
             }
@@ -82,31 +82,15 @@ static TreeNode *substitute(TreeNode *expr, TreeNode *var, TreeNode *sub) {
                     parname = expr->children[0]->name;
                 }
                 result = substitute(expr->children[1],var,sub);
-                if(result!=expr->children[1]) {
-                    deleteTreeNode(expr->children[1]);
-                }else if(expr->children[1]->kind==IdK) {
-                    deleteTreeNode(sub);
-                }
                 expr->children[1] = result;
                 deleteVarSet(set);
             }
             return expr;
         case AppK:
             result = substitute(expr->children[0],var,sub);
-            if(result!=expr->children[0]) {
-                deleteTreeNode(expr->children[0]);
-            }else if(expr->children[0]->kind==IdK) {
-                deleteSub = 1;
-            }
             expr->children[0] = result;
             result = substitute(expr->children[1],var,sub);
-            if(result!=expr->children[1]) {
-                deleteTreeNode(expr->children[1]);
-            }else if(deleteSub && expr->children[1]->kind==IdK) {
-                deleteTreeNode(sub);
-            }
             expr->children[1] = result;
-            deleteSub = 0;
             return expr;
         default:
             fprintf(errOut,"Unknown expression type.\n");
@@ -125,18 +109,15 @@ TreeNode * alphaConversion(TreeNode *expr) {
     // pick a new name
     while(strcmp(name,expr->children[0]->name)==0 ||  contains(set,name)==1) {
         // replace the last character with a different alphabet.
-        // TODO this may not work if all alphabets are used
+        // TODO this may not work if all alphabets are used up
         char lastchar = name[strlen(name)-1];
         name[strlen(name)-1] = 'a' + (lastchar+1-'a')%('z'-'a'+1);
     }
     TreeNode *var = newTreeNode(IdK);
     var->name = name;
     TreeNode *result = substitute(expr->children[1], expr->children[0], var);
-    if(result!=expr->children[1]) {
-        deleteTreeNode(expr->children[1]);
-    }
     expr->children[1] = result;
-    deleteTreeNode(expr->children[0]);
+    deleteTree(expr->children[0]);
     expr->children[0] = var;
     return expr;
 }
@@ -151,11 +132,11 @@ TreeNode * betaReduction(TreeNode *expr) {
         return expr;
     }else if(left->kind==AbsK) {
         TreeNode* result = substitute(left->children[1],left->children[0],expr->children[1]);
-        if(result!=left->children[1]) {
-            deleteTreeNode(left->children[1]);
-            left->children[1] = NULL;
-        }
-        deleteTreeNode(left->children[0]);
+        // If result == left->children[1], prevent deleting the result;
+        // If result != left->children[1], already deleted in substitute(), so
+        // prevent double free.
+        left->children[1] = NULL;
+        deleteTree(expr);
         return result;
     }
     return expr;

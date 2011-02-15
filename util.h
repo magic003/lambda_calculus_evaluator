@@ -10,8 +10,11 @@
 /* allocates a memory space for tree node. */
 TreeNode * newTreeNode(ExprKind kind);
 
-/* reallocates the memory space for a tree node. */
-void deleteTreeNode(TreeNode *node);
+/* reallocates the memory space for a tree. */
+void deleteTree(TreeNode *tree);
+
+/* duplicates the tree by allocating a new memory space. */
+TreeNode * duplicateTree(TreeNode *tree);
 
 /* copies a string. */
 char * stringCopy(const char* s);

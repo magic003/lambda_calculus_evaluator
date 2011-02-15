@@ -22,17 +22,29 @@ TreeNode * newTreeNode(ExprKind kind) {
     return node;
 }
 
-void deleteTreeNode(TreeNode* node) {
-    if(node!=NULL) {
-        deleteTreeNode(node->children[0]);
-        node->children[0] = NULL;
-        deleteTreeNode(node->children[1]);
-        node->children[1] = NULL;
-        if(node->name!=NULL) {
-            free(node->name);
-            node->name=NULL;
+void deleteTree(TreeNode* tree) {
+    if(tree!=NULL) {
+        deleteTree(tree->children[0]);
+        tree->children[0] = NULL;
+        deleteTree(tree->children[1]);
+        tree->children[1] = NULL;
+        if(tree->name!=NULL) {
+            free(tree->name);
+            tree->name=NULL;
         }
+        free(tree);
     }
+}
+
+TreeNode *duplicateTree(TreeNode* tree) {
+    if(tree!=NULL) {
+        TreeNode *result = newTreeNode(tree->kind);
+        result->name = stringCopy(tree->name);
+        result->children[0] = duplicateTree(tree->children[0]);
+        result->children[1] = duplicateTree(tree->children[1]);
+        return result;
+    }
+    return NULL;
 }
 
 char * stringCopy(const char* s) {

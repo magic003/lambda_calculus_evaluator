@@ -56,7 +56,7 @@ int main(int argc, char* argv[]) {
         fprintf(out,"\t->  ");
         printExpression(tree);
         fprintf(out,"\n");
-        deleteTreeNode(tree);
+        deleteTree(tree);
         tree=NULL;
         deleteStringBuffer();
     }
@@ -74,7 +74,7 @@ int main(int argc, char* argv[]) {
         fprintf(out,"\t->  ");
         printExpression(tree);
         fprintf(out,"\n");
-        deleteTreeNode(tree);
+        deleteTree(tree);
         tree=NULL;
         deleteStringBuffer();
     }
