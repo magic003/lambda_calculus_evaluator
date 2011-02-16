@@ -105,14 +105,22 @@ TreeNode * alphaConversion(TreeNode *expr) {
     }
 
     VarSet* set = FV(expr->children[1]);
-    char * name = strdup(expr->children[0]->name);
+    char *name = NULL;
+    int len = strlen(expr->children[0]->name);
+    int attempts = 0;
     // pick a new name
-    while(strcmp(name,expr->children[0]->name)==0 ||  contains(set,name)==1) {
-        // replace the last character with a different alphabet.
-        // TODO this may not work if all alphabets are used up
-        char lastchar = name[strlen(name)-1];
-        name[strlen(name)-1] = 'a' + (lastchar+1-'a')%('z'-'a'+1);
-    }
+    do {
+        if(name!=NULL) free(name);  // free the last attempt
+        attempts++;
+        name = malloc(len+attempts);
+        strcpy(name,expr->children[0]->name);
+        int a;
+        // append '_' to the original name
+        for(a=0;a<attempts;a++) {
+            strcat(name,"_");
+        }
+    } while(strcmp(name,expr->children[0]->name)==0 || contains(set,name)==1);
+
     TreeNode *var = newTreeNode(IdK);
     var->name = name;
     TreeNode *result = substitute(expr->children[1], expr->children[0], var);

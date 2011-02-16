@@ -57,10 +57,12 @@ int main(int argc, char* argv[]) {
                     "(lambda m (lambda n (lambda f (lambda x m f (n f x)))))",
                     "(lambda n (lambda f (lambda x n (lambda g (lambda h h (g f))) (lambda u x) (lambda u u))))",
                     "(lambda g (lambda x g (x x)) (lambda x g (x x)))",
-                    "(lambda g (lambda x g (x x)) (lambda x g (x x))) g"
+                    "(lambda g (lambda x g (x x)) (lambda x g (x x))) g",
+                    "A","ab","abc","aAa","AB","ABC","AaZ","var","_","__","_a",
+                    "a_","A_a","_a_","(lambda name name)","say hello","_ _"
                     };
     int i;
-    for(i=0;i<42;i++) {
+    for(i=0;i<59;i++) {
         fprintf(out,"Expression: %s\n",exprs[i]);
         useStringBuffer(exprs[i]);
         yyparse();
@@ -78,11 +80,15 @@ int main(int argc, char* argv[]) {
     }
 
     char *exprs1[] = {"(lambda x (lambda x x))",
-            "(lambda x (lambda y x))"
+            "(lambda x (lambda x_ x))",
+            "(lambda az az)", "(lambda aZ aZ)","(lambda a_ a_)",
+            "(lambda z (lambda z z))", "(lambda aZ (lambda aZ aZ))",
+            "(lambda a_ (lambda a_ a_))", "(lambda aZ (lambda aZ_ aZ))",
+            "(lambda a_ (lambda a__ a_))"
             };
 
     fprintf(out,"\nTest alpha conversion:\n");
-    for(i=0;i<2;i++) {
+    for(i=0;i<10;i++) {
         fprintf(out,"Expression: %s\n",exprs1[i]);
         useStringBuffer(exprs1[i]);
         yyparse();

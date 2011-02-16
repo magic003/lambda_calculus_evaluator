@@ -9,7 +9,7 @@
 %}
 
 lambda      "lambda"
-identifier  [a-z]
+identifier  [A-Za-z_]+
 whitespace  [ \t]+
 newline     [\r\n]+
 
