@@ -1,7 +1,7 @@
 CC = gcc
 LEX = flex
 YACC = bison
-OBJS = scanner.o parser.o eval.o util.o varset.o
+OBJS = scanner.o parser.o eval.o util.o varset.o builtin.o primitive.o
 SCANNER_C = lex.yy.c
 PARSER_H = y.tab.h
 PARSER_C = y.tab.c
@@ -35,6 +35,12 @@ util.o: util.h util.c
 
 varset.o: varset.h varset.c
 	$(CC) -c varset.c
+
+builtin.o: builtin.h builtin.c
+	$(CC) -c builtin.c
+
+primitive.o: primitive.c primitive.h
+	$(CC) -c primitive.c
 
 clean:
 	rm $(OBJS)

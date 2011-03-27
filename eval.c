@@ -6,12 +6,16 @@
 #include "globals.h"
 #include "util.h"
 #include "varset.h"
+#include "builtin.h"
+#include "primitive.h"
 #include "eval.h"
 
 TreeNode * evaluate(TreeNode *expr) {
+    TreeNode* result = expr;
     if(expr!=NULL) {
         switch(expr->kind) {
             case IdK:
+            case ConstK:
                 return expr;
             case AbsK:
                 expr->children[1] = evaluate(expr->children[1]);
@@ -19,7 +23,33 @@ TreeNode * evaluate(TreeNode *expr) {
             case AppK:
                 expr->children[0] = evaluate(expr->children[0]);
                 expr->children[1] = evaluate(expr->children[1]);
-                return betaReduction(expr);
+                if(expr->children[0]->kind==IdK) {
+                    // expand tree node for builtin functions
+                    BuiltinFun* fun = lookupBuiltinFun(expr->children[0]->name);
+                    if(fun!=NULL) {
+                        //NOTE: could use substitute here, but the expanded
+                        // tree will be copied. So use this simple method
+                        // for efficience.
+                        deleteTree(expr->children[0]);
+                        expr->children[0] = (fun->expandFun)();
+                    }
+                }
+                result = betaReduction(expr);
+                // beta-reduction may result in primitive operations
+                if(result->kind==PrimiK) {
+                    result = evaluate(result);
+                }
+                return result;
+            case PrimiK:
+                expr->children[0] = evaluate(expr->children[0]);
+                expr->children[1] = evaluate(expr->children[1]);
+                // only perform primitive operation if operands are constants
+                if(expr->children[0]->kind==ConstK 
+                    && expr->children[1]->kind==ConstK) {
+                    result = evalPrimitive(expr);
+                    deleteTree(expr);
+                }
+                return result;
             default:
                 fprintf(errOut,"Unkown expression kind.\n");
         }
@@ -37,11 +67,15 @@ static VarSet * FV(TreeNode *expr) {
             set = newVarSet();
             addVar(set,expr->name);
             break;
+        case ConstK:
+            set = newVarSet();
+            break;
         case AbsK:
             set = FV(expr->children[1]);
             deleteVar(set,expr->children[0]->name);
             break;
         case AppK:
+        case PrimiK:
             set = newVarSet();
             set1 = FV(expr->children[0]);
             set2 = FV(expr->children[1]);
@@ -73,6 +107,8 @@ static TreeNode *substitute(TreeNode *expr, TreeNode *var, TreeNode *sub) {
             }else {
                 return expr;
             }
+        case ConstK:
+            return expr;
         case AbsK:
             parname = expr->children[0]->name;
             if(strcmp(parname,var->name)!=0) {
@@ -87,6 +123,7 @@ static TreeNode *substitute(TreeNode *expr, TreeNode *var, TreeNode *sub) {
             }
             return expr;
         case AppK:
+        case PrimiK:
             result = substitute(expr->children[0],var,sub);
             expr->children[0] = result;
             result = substitute(expr->children[1],var,sub);

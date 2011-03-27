@@ -59,10 +59,15 @@ int main(int argc, char* argv[]) {
                     "(lambda g (lambda x g (x x)) (lambda x g (x x)))",
                     "(lambda g (lambda x g (x x)) (lambda x g (x x))) g",
                     "A","ab","abc","aAa","AB","ABC","AaZ","var","_","__","_a",
-                    "a_","A_a","_a_","(lambda name name)","say hello","_ _"
+                    "a_","A_a","_a_","(lambda name name)","say hello","_ _",
+                    "-1","-50","0","100","(lambda x 10)","(lambda x x) 1",
+                    "(lambda x x) -10","+ 1 1","(+ 2 2)","+ 1","+ -1 +1",
+                    "(lambda x + x 1)","+","(lambda x (lambda y + x y))",
+                    "- 1 1","* 1 1","/ 1 1","% 1 1","+ (+ 1 2) 3", "+ y",
+                    "* (+ 1 2) 3","(lambda x (lambda y + (* x x) (* y y))) 3 4"
                     };
     int i;
-    for(i=0;i<59;i++) {
+    for(i=0;i<81;i++) {
         fprintf(out,"Expression: %s\n",exprs[i]);
         useStringBuffer(exprs[i]);
         yyparse();

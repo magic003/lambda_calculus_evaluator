@@ -17,13 +17,15 @@
 #endif
 
 /* expression types */
-typedef enum { IdK, AbsK, AppK } ExprKind;
+typedef enum { IdK, ConstK, AbsK, AppK, PrimiK } ExprKind;
 
 #define MAXCHILDREN 2
 /* tree nodes */
 typedef struct treeNode {
     ExprKind kind;
+    // NOTE: cannot use Union here because name is checked to free strings
     char * name;    // only for IdK
+    int value;      // only for integers
     struct treeNode * children[MAXCHILDREN];
 } TreeNode;
 

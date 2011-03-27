@@ -9,7 +9,8 @@
 %}
 
 lambda      "lambda"
-identifier  [A-Za-z_]+
+integer     [+-]?[0-9]+
+identifier  [A-Za-z_]+|[+\-*/%]
 whitespace  [ \t]+
 newline     [\r\n]+
 
@@ -17,6 +18,9 @@ newline     [\r\n]+
 
     /* reserved words */
 {lambda}        {return LAMBDA;}
+
+    /* constants */
+{integer}       {return INT;}
 
     /* identifier */
 {identifier}    {return ID;}

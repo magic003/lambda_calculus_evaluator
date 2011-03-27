@@ -16,6 +16,7 @@ extern YYSTYPE tree;
 %}
 
 %token  LAMBDA
+%token  INT
 %token  ID
 
 %start expression_list
@@ -40,6 +41,11 @@ expression      : ID
                     {
                         $$ = newTreeNode(IdK);
                         $$->name = stringCopy(yytext);
+                    }
+                | INT
+                    {
+                        $$ = newTreeNode(ConstK);
+                        $$->value = atoi(yytext);
                     }
                 | '(' LAMBDA ID 
                     {
