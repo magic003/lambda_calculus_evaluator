@@ -15,7 +15,7 @@ static int hash(const char * str) {
     int temp = 0;
     int i;
     for(i=0;str[i]!='\0';i++) {
-        temp = (temp << SHIFT + str[i]) % SIZE;
+        temp = (temp << (SHIFT + str[i])) % SIZE;
     }
     return temp;
 }

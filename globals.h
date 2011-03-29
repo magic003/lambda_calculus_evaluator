@@ -33,5 +33,11 @@ extern FILE* in;
 extern FILE* out;
 extern FILE* errOut;
 
+// lex and yacc definitions
 extern char* yytext;
+extern int yyerror(char*);
+extern int yylex(void);
+extern void useStringBuffer(const char*);
+extern void deleteStringBuffer();
+extern int yyparse();
 #endif

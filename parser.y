@@ -69,4 +69,5 @@ expression      : ID
 int yyerror(char *message) {
     fprintf(errOut,"%s\n",message);
     fprintf(errOut,"\ttoken: %s\n",yytext);
+    return 0;
 }

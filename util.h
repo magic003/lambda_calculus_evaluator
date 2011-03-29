@@ -20,8 +20,8 @@ TreeNode * duplicateTree(TreeNode *tree);
 char * stringCopy(const char* s);
 
 /* prints the syntax tree. */
-void printTree(TreeNode * tree);
+void printTree(TreeNode * tree, FILE* stream);
 
 /* prints the expression in a human readable format. */
-void printExpression(TreeNode *expr);
+void printExpression(TreeNode *expr, FILE* stream);
 #endif

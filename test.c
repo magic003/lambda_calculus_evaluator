@@ -8,8 +8,6 @@
 #include "util.h"
 #include "eval.h"
 
-#define PARSE_DUMP 0
-
 TreeNode * tree = NULL;
 
 FILE* out;
@@ -71,13 +69,14 @@ int main(int argc, char* argv[]) {
         fprintf(out,"Expression: %s\n",exprs[i]);
         useStringBuffer(exprs[i]);
         yyparse();
-        if(PARSE_DUMP) {
-            printTree(tree);
-            fprintf(out,"\n");
-        }
+        #ifdef DEBUG
+            fprintf(errOut,"Parse tree =>\n");
+            printTree(tree,errOut);
+            fprintf(errOut,"\n");
+        #endif
         tree = evaluate(tree);
         fprintf(out,"\t->  ");
-        printExpression(tree);
+        printExpression(tree,out);
         fprintf(out,"\n");
         deleteTree(tree);
         tree=NULL;
@@ -99,7 +98,7 @@ int main(int argc, char* argv[]) {
         yyparse();
         tree = alphaConversion(tree);
         fprintf(out,"\t->  ");
-        printExpression(tree);
+        printExpression(tree,out);
         fprintf(out,"\n");
         deleteTree(tree);
         tree=NULL;

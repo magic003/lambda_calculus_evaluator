@@ -63,101 +63,101 @@ char * stringCopy(const char* s) {
     return t;
 }
 
-void printSpaces(int n) {
+static void printSpaces(int n, FILE* stream) {
     int i;
     for(i=0;i<n;i++) {
-        fprintf(out," ");
+        fprintf(stream," ");
     }
 }
 
-void printTree(TreeNode * tree) {
+void printTree(TreeNode * tree, FILE* stream) {
     static int indentno = 0;
     int i;
     if(tree==NULL) return;
 
     switch(tree->kind) {
         case IdK:
-            fprintf(out,"Identifier: %s\n",tree->name);
+            fprintf(stream,"Identifier: %s\n",tree->name);
             break;
         case ConstK:
-            fprintf(out,"Constant: %d\n",tree->value);
+            fprintf(stream,"Constant: %d\n",tree->value);
             break;
         case AbsK:
-            fprintf(out,"Abstraction:\n");
+            fprintf(stream,"Abstraction:\n");
             break;
         case AppK:
-            fprintf(out,"Application:\n");
+            fprintf(stream,"Application:\n");
             break;
         case PrimiK:
-            fprintf(out,"Primitive: %s\n",tree->name);
+            fprintf(stream,"Primitive: %s\n",tree->name);
             break;
         default:
-            fprintf(out,"Unknown expression kind.\n");
+            fprintf(stream,"Unknown expression kind.\n");
     }
     for(i=0;i<MAXCHILDREN;i++) {
         indentno+=2;
         if(tree->children[i]!=NULL) {
-            printSpaces(indentno);
-            printTree(tree->children[i]);
+            printSpaces(indentno,stream);
+            printTree(tree->children[i],stream);
         }
         indentno-=2;
     }
 }
 
-void printExpression(TreeNode* expr) {
+void printExpression(TreeNode* expr, FILE* stream) {
     if(expr==NULL) return;
 
     switch(expr->kind) {
         case IdK:
-            fprintf(out,"%s",expr->name);
+            fprintf(stream,"%s",expr->name);
             break;
         case ConstK:
-            fprintf(out,"%d", expr->value);
+            fprintf(stream,"%d", expr->value);
             break;
         case AbsK:
-            fprintf(out,"(lambda ");
-            printExpression(expr->children[0]);
-            fprintf(out," ");
-            printExpression(expr->children[1]);
-            fprintf(out,")");
+            fprintf(stream,"(lambda ");
+            printExpression(expr->children[0],stream);
+            fprintf(stream," ");
+            printExpression(expr->children[1],stream);
+            fprintf(stream,")");
             break;
         case AppK:
-            printExpression(expr->children[0]);
-            fprintf(out," ");
+            printExpression(expr->children[0],stream);
+            fprintf(stream," ");
             if(expr->children[1]->kind==AppK
                 || expr->children[1]->kind==PrimiK) {
-                fprintf(out,"(");
+                fprintf(stream,"(");
             }
-            printExpression(expr->children[1]);
+            printExpression(expr->children[1],stream);
             if(expr->children[1]->kind==AppK
                 || expr->children[1]->kind==PrimiK) {
-                fprintf(out,")");
+                fprintf(stream,")");
             }
             break;
         case PrimiK:
             if(expr->children[0]->kind==AppK 
                 || expr->children[0]->kind==PrimiK) {
-                fprintf(out,"(");
+                fprintf(stream,"(");
             }
-            printExpression(expr->children[0]);
+            printExpression(expr->children[0],stream);
             if(expr->children[0]->kind==AppK
                 || expr->children[0]->kind==PrimiK) {
-                fprintf(out,")");
+                fprintf(stream,")");
             }
-            fprintf(out," ");
-            fprintf(out,"`%s`",expr->name);
-            fprintf(out," ");
+            fprintf(stream," ");
+            fprintf(stream,"`%s`",expr->name);
+            fprintf(stream," ");
             if(expr->children[1]->kind==AppK 
                 || expr->children[1]->kind==PrimiK) {
-                fprintf(out,"(");
+                fprintf(stream,"(");
             }
-            printExpression(expr->children[1]);
+            printExpression(expr->children[1],stream);
             if(expr->children[1]->kind==AppK
                 || expr->children[1]->kind==PrimiK) {
-                fprintf(out,")");
+                fprintf(stream,")");
             }
             break;
         default:
-            fprintf(out,"Unknown expression kind.\n");
+            fprintf(stream,"Unknown expression kind.\n");
     }
 }

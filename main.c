@@ -9,7 +9,6 @@
 #include "eval.h"
 #include "util.h"
 
-#define DEBUG 0
 FILE* in;
 FILE* out;
 FILE* errOut;
@@ -33,11 +32,15 @@ int main(int argc, char* argv[]) {
         fgets(buff,BUFF_SIZE-1,in);
         useStringBuffer(buff);
         yyparse();
-        if(DEBUG) printTree(tree);
+        #ifdef DEBUG 
+            fprintf(errOut,"Parse tree =>\n");
+            printTree(tree,errOut);
+            fprintf(errOut,"\n");
+        #endif
         
         tree = evaluate(tree);
         fprintf(out,"-> ");
-        printExpression(tree);
+        printExpression(tree,out);
         deleteTree(tree);
         tree=NULL;
         deleteStringBuffer();
