@@ -62,10 +62,12 @@ int main(int argc, char* argv[]) {
                     "(lambda x x) -10","+ 1 1","(+ 2 2)","+ 1","+ -1 +1",
                     "(lambda x + x 1)","+","(lambda x (lambda y + x y))",
                     "- 1 1","* 1 1","/ 1 1","% 1 1","+ (+ 1 2) 3", "+ y",
-                    "* (+ 1 2) 3","(lambda x (lambda y + (* x x) (* y y))) 3 4"
+                    "* (+ 1 2) 3","^ 2 4","< 1 2","> 1 2","= 2 2","<= 1 2",
+                    ">= 1 2","!= 2 2",
+                    "(lambda x (lambda y + (* x x) (* y y))) 3 4"
                     };
     int i;
-    for(i=0;i<81;i++) {
+    for(i=0;i<88;i++) {
         fprintf(out,"Expression: %s\n",exprs[i]);
         useStringBuffer(exprs[i]);
         yyparse();

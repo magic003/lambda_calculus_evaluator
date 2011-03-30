@@ -10,7 +10,7 @@
 
 lambda      "lambda"
 integer     [+-]?[0-9]+
-identifier  [A-Za-z_]+|[+\-*/%]
+identifier  [A-Za-z_]+|[+\-*/%^<=>]|"<="|"!="|">="
 whitespace  [ \t]+
 newline     [\r\n]+
 

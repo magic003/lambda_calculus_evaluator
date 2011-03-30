@@ -52,16 +52,51 @@ static TreeNode* expandOver() {
 static TreeNode* expandMod() {
     return expandByName("%");
 }
+
+static TreeNode* expandPow() {
+    return expandByName("^");
+}
+
+static TreeNode* expandLt() {
+    return expandByName("<");
+}
+
+static TreeNode* expandEq() {
+    return expandByName("=");
+}
+
+static TreeNode* expandGt() {
+    return expandByName(">");
+}
+
+static TreeNode* expandLe() {
+    return expandByName("<=");
+}
+
+static TreeNode* expandNe() {
+    return expandByName("!=");
+}
+
+static TreeNode* expandGe() {
+    return expandByName(">=");
+}
 // End of expand functions
 
-#define FUNCTION_NUM 5
+#define FUNCTION_NUM 12
 
 BuiltinFun builtinFunctions[FUNCTION_NUM] = {
     { "+", expandPlus},
     { "-", expandMinus},
     { "*", expandTimes},
     { "/", expandOver},
-    { "%", expandMod}
+    { "%", expandMod},
+    { "^", expandPow},
+    { "<", expandLt},
+    { "=", expandEq},
+    { ">", expandGt},
+    { "<=",expandLe},
+    { "!=",expandNe},
+    { ">=",expandGe}
 };
 
 BuiltinFun* lookupBuiltinFun(const char* name) {
