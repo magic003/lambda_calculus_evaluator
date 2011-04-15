@@ -27,7 +27,6 @@ int main(int argc, char* argv[]) {
                     "(lambda x x) (lambda y y)",
                     "(lambda x x) (lambda y y) z",
                     "(lambda x x x)",
-                    "(lambda x x x) (lambda x x x)",
                     "(lambda x (lambda x x))",
                     "(lambda x (lambda y x))",
                     "(lambda x (lambda y y))",
@@ -55,7 +54,7 @@ int main(int argc, char* argv[]) {
                     "(lambda m (lambda n (lambda f (lambda x m f (n f x)))))",
                     "(lambda n (lambda f (lambda x n (lambda g (lambda h h (g f))) (lambda u x) (lambda u u))))",
                     "(lambda g (lambda x g (x x)) (lambda x g (x x)))",
-                    "(lambda g (lambda x g (x x)) (lambda x g (x x))) g",
+//                    "(lambda g (lambda x g (x x)) (lambda x g (x x))) g",
                     "A","ab","abc","aAa","AB","ABC","AaZ","var","_","__","_a",
                     "a_","A_a","_a_","(lambda name name)","say hello","_ _",
                     "-1","-50","0","100","(lambda x 10)","(lambda x x) 1",
@@ -64,7 +63,9 @@ int main(int argc, char* argv[]) {
                     "- 1 1","* 1 1","/ 1 1","% 1 1","+ (+ 1 2) 3", "+ y",
                     "* (+ 1 2) 3","^ 2 4","< 1 2","> 1 2","= 2 2","<= 1 2",
                     ">= 1 2","!= 2 2",
-                    "(lambda x (lambda y + (* x x) (* y y))) 3 4"
+                    "(lambda x (lambda y + (* x x) (* y y))) 3 4",
+                    "(lambda x (lambda y y x)) 1 (lambda x x)",
+                    "+ (lambda x x) 1"
                     };
     int i;
     for(i=0;i<88;i++) {
