@@ -16,7 +16,9 @@ TreeNode * evaluate(TreeNode *expr) {
         switch(expr->kind) {
             case IdK:
             case ConstK:
+                return expr;
             case AbsK:
+                expr->children[1] = evaluate(expr->children[1]);
                 return expr;
             case AppK:
                 expr->children[0] = evaluate(expr->children[0]);
@@ -30,12 +32,15 @@ TreeNode * evaluate(TreeNode *expr) {
                         // for efficience.
                         deleteTree(expr->children[0]);
                         expr->children[0] = (fun->expandFun)();
-                    } else {
-                        fprintf(errOut, "Error: %s is not a builtin function.\n", expr->children[0]->name);
-                        return expr;
                     }
                 }
-                return evaluate(betaReduction(expr));
+                result = betaReduction(expr);
+                // beta-reduction may result in primitive operations
+                if(result->kind==PrimiK || 
+                    (result->kind==AppK && result->children[0]->kind==AbsK)) {
+                    result = evaluate(result);
+                }
+                return result;
             case PrimiK:
                 expr->children[0] = evaluate(expr->children[0]);
                 expr->children[1] = evaluate(expr->children[1]);
@@ -44,8 +49,6 @@ TreeNode * evaluate(TreeNode *expr) {
                     && expr->children[1]->kind==ConstK) {
                     result = evalPrimitive(expr);
                     deleteTree(expr);
-                } else {
-                    fprintf(errOut, "Error: %s can only be applied on constants.\n", expr->name);
                 }
                 return result;
             default:
