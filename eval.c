@@ -20,7 +20,6 @@ TreeNode * evaluate(TreeNode *expr) {
                 return expr;
             case AppK:
                 expr->children[0] = evaluate(expr->children[0]);
-                expr->children[1] = evaluate(expr->children[1]);
                 if(expr->children[0]->kind==IdK) {
                     // expand tree node for builtin functions
                     BuiltinFun* fun = lookupBuiltinFun(expr->children[0]->name);
