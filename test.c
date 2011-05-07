@@ -27,7 +27,7 @@ int main(int argc, char* argv[]) {
                     "(lambda x x) (lambda y y)",
                     "(lambda x x) (lambda y y) z",
                     "(lambda x x x)",
-                    "(lambda x x x) (lambda x x x)",
+//                    "(lambda x x x) (lambda x x x)",
                     "(lambda x (lambda x x))",
                     "(lambda x (lambda y x))",
                     "(lambda x (lambda y y))",
@@ -67,7 +67,7 @@ int main(int argc, char* argv[]) {
                     "(lambda x (lambda y + (* x x) (* y y))) 3 4"
                     };
     int i;
-    for(i=0;i<88;i++) {
+    for(i=0;i<87;i++) {
         fprintf(out,"Expression: %s\n",exprs[i]);
         useStringBuffer(exprs[i]);
         yyparse();
