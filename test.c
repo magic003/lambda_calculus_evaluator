@@ -99,13 +99,13 @@ int main(int argc, char* argv[]) {
         fprintf(out,"Expression: %s\n",exprs1[i]);
         useStringBuffer(exprs1[i]);
         yyparse();
+        deleteStringBuffer();
         tree = alphaConversion(tree);
         fprintf(out,"\t->  ");
         printExpression(tree,out);
         fprintf(out,"\n");
         deleteTree(tree);
         tree=NULL;
-        deleteStringBuffer();
     }
 
     return 0;

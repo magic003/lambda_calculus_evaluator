@@ -8,6 +8,7 @@
 #include "varset.h"
 #include "builtin.h"
 #include "primitive.h"
+#include "stdlib.h"
 #include "eval.h"
 
 TreeNode * evaluate(TreeNode *expr) {
@@ -22,16 +23,21 @@ TreeNode * evaluate(TreeNode *expr) {
                 expr->children[0] = evaluate(expr->children[0]);
                 expr->children[1] = evaluate(expr->children[1]);
                 if(expr->children[0]->kind==IdK) {
-                    // expand tree node for builtin functions
-                    BuiltinFun* fun = lookupBuiltinFun(expr->children[0]->name);
-                    if(fun!=NULL) {
+                    // expand tree node for builtin functions and standard
+                    // functions
+                    BuiltinFun* fun = NULL;
+                    StandardFun* stdFun = NULL;
+                    if((fun=lookupBuiltinFun(expr->children[0]->name))!=NULL) {
                         //NOTE: could use substitute here, but the expanded
                         // tree will be copied. So use this simple method
                         // for efficience.
                         deleteTree(expr->children[0]);
                         expr->children[0] = (fun->expandFun)();
+                    } else if((stdFun=lookupStandardFun(expr->children[0]->name))!=NULL) {
+                        deleteTree(expr->children[0]);
+                        expr->children[0] = expandStandardFun(stdFun);
                     } else {
-                        fprintf(errOut, "Error: %s is not a builtin function.\n", expr->children[0]->name);
+                        fprintf(errOut, "Error: %s is not a predefined function.\n", expr->children[0]->name);
                         return expr;
                     }
                 }
