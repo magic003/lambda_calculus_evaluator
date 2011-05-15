@@ -32,6 +32,8 @@ int main(int argc, char* argv[]) {
         fgets(buff,BUFF_SIZE-1,in);
         useStringBuffer(buff);
         yyparse();
+        deleteStringBuffer();
+        buff[0] = EOF;
         #ifdef DEBUG 
             fprintf(errOut,"Parse tree =>\n");
             printTree(tree,errOut);
@@ -43,8 +45,6 @@ int main(int argc, char* argv[]) {
         printExpression(tree,out);
         deleteTree(tree);
         tree=NULL;
-        deleteStringBuffer();
-        buff[0] = EOF;
         fprintf(out,"\n\n");
     }
     return 0;

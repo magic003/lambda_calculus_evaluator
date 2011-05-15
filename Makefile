@@ -2,7 +2,7 @@ CC = gcc
 CFLAGS = -Wall
 LEX = flex
 YACC = bison
-OBJS = scanner.o parser.o eval.o util.o varset.o builtin.o primitive.o
+OBJS = scanner.o parser.o eval.o util.o varset.o builtin.o primitive.o stdlib.o
 SCANNER_C = lex.yy.c
 PARSER_H = y.tab.h
 PARSER_C = y.tab.c
@@ -45,6 +45,9 @@ builtin.o: builtin.h builtin.c
 
 primitive.o: primitive.c primitive.h
 	$(CC) $(CFLAGS) -c primitive.c
+
+stdlib.o: stdlib.h stdlib.c
+	$(CC) $(CFLAGS) -c stdlib.c
 
 clean:
 	rm $(OBJS)
