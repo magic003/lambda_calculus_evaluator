@@ -84,11 +84,14 @@ int main(int argc, char* argv[]) {
             fprintf(errOut,"\n");
         #endif
         tree = evaluate(tree);
-        fprintf(out,"\t->  ");
-        printExpression(tree,out);
+        if(tree!=NULL) {
+            fprintf(out,"->  ");
+            printExpression(tree,out);
+            fprintf(out,"\n");
+            deleteTree(tree);
+            tree=NULL;
+        }
         fprintf(out,"\n");
-        deleteTree(tree);
-        tree=NULL;
     }
 
     char *exprs1[] = {"(lambda x (lambda x x))",
@@ -106,11 +109,14 @@ int main(int argc, char* argv[]) {
         yyparse();
         deleteStringBuffer();
         tree = alphaConversion(tree);
-        fprintf(out,"\t->  ");
-        printExpression(tree,out);
+        if(tree!=NULL) {
+            fprintf(out,"->  ");
+            printExpression(tree,out);
+            fprintf(out,"\n");
+            deleteTree(tree);
+            tree=NULL;
+        }
         fprintf(out,"\n");
-        deleteTree(tree);
-        tree=NULL;
     }
 
     return 0;

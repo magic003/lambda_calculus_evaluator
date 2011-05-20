@@ -11,53 +11,96 @@
 #include "stdlib.h"
 #include "eval.h"
 
+/* Tests if the expression is a value. */
+static int isValue(TreeNode *expr) {
+    return expr!=NULL 
+        && (expr->kind==IdK || expr->kind==ConstK || expr->kind==AbsK);
+}
+
+/* Search a function in builtin library and standard library by name. */
+static TreeNode* resolveFunction(const char* name) {
+    BuiltinFun* fun = NULL;
+    StandardFun* stdFun = NULL;
+    if((fun=lookupBuiltinFun(name))!=NULL) {
+        return (fun->expandFun)();
+    } else if((stdFun=lookupStandardFun(name))!=NULL) {
+        return expandStandardFun(stdFun);
+    }
+    return NULL;
+}
+
 TreeNode * evaluate(TreeNode *expr) {
-    TreeNode* result = expr;
-    if(expr!=NULL) {
-        switch(expr->kind) {
-            case IdK:
-            case ConstK:
-            case AbsK:
-                return expr;
-            case AppK:
-                expr->children[0] = evaluate(expr->children[0]);
-                if(expr->children[0]->kind==IdK) {
-                    // expand tree node for builtin functions and standard
-                    // functions
-                    BuiltinFun* fun = NULL;
-                    StandardFun* stdFun = NULL;
-                    if((fun=lookupBuiltinFun(expr->children[0]->name))!=NULL) {
-                        //NOTE: could use substitute here, but the expanded
-                        // tree will be copied. So use this simple method
-                        // for efficience.
-                        deleteTree(expr->children[0]);
-                        expr->children[0] = (fun->expandFun)();
-                    } else if((stdFun=lookupStandardFun(expr->children[0]->name))!=NULL) {
-                        deleteTree(expr->children[0]);
-                        expr->children[0] = expandStandardFun(stdFun);
+    TreeNode* state = expr;
+    TreeNode** previous = NULL;
+    TreeNode* current = NULL;
+    while(state!=NULL && !isValue(state)) {
+        previous = &state;
+        current = state;
+        while(current!=NULL) {
+            if(current->kind==AppK) {   // applications
+                if(!isValue(current->children[0])) {
+                    previous = &current->children[0];
+                    current = current->children[0];
+                } else if(current->children[0]->kind==ConstK) {
+                    fprintf(errOut, "Error: cannot apply a constant to any argument.\n");
+                    fprintf(errOut, "\t\t");
+                    printExpression(current,errOut);
+                    deleteTree(state);
+                    return NULL;
+                }else if(current->children[0]->kind==IdK) {
+                    // find function from builtin and standard library
+                    TreeNode* fun = resolveFunction(current->children[0]->name);
+                    if(fun==NULL) {
+                        fprintf(errOut, "Error: %s is not a predefined function.\n", current->children[0]->name);
+                        deleteTree(state);
+                        return NULL;
+                    }
+                    deleteTree(current->children[0]);
+                    current->children[0] = fun;
+                    break;
+                }   else {
+                    current=betaReduction(current);
+                    *previous = current;
+                    break;
+                }
+            }else if(current->kind==PrimiK) {  // primitive application
+                if(!isValue(current->children[0])) {
+                    previous = &current->children[0];
+                    current = current->children[0];
+                }else if(!isValue(current->children[1])) {
+                    previous = &current->children[1];
+                    current = current->children[1];
+                }else { // reduce the current node
+                    // only perform primitive operation if operands are constants
+                    if(current->children[0]->kind==ConstK 
+                        && current->children[1]->kind==ConstK) {
+                        TreeNode* tmp  = evalPrimitive(current);
+                        deleteTree(current);
+                        current = tmp;
+                        *previous = current;
+                        break;
                     } else {
-                        fprintf(errOut, "Error: %s is not a predefined function.\n", expr->children[0]->name);
-                        return expr;
+                        fprintf(errOut, "Error: %s can only be applied on constants.\n", current->name);
+                        deleteTree(state);
+                        return NULL;
                     }
                 }
-                return evaluate(betaReduction(expr));
-            case PrimiK:
-                expr->children[0] = evaluate(expr->children[0]);
-                expr->children[1] = evaluate(expr->children[1]);
-                // only perform primitive operation if operands are constants
-                if(expr->children[0]->kind==ConstK 
-                    && expr->children[1]->kind==ConstK) {
-                    result = evalPrimitive(expr);
-                    deleteTree(expr);
-                } else {
-                    fprintf(errOut, "Error: %s can only be applied on constants.\n", expr->name);
-                }
-                return result;
-            default:
-                fprintf(errOut,"Unkown expression kind.\n");
+            }else {
+                    fprintf(errOut,"Error: Cannot evaluate unkown expression kind.\n");
+                    deleteTree(state);
+                    return NULL;
+            }
         }
+        #ifdef DEBUG
+            // print intermediate steps
+            if(!isValue(state)) {
+                fprintf(out,"-> ");
+                printExpression(state,out);
+                fprintf(out,"\n");
+            }
+        #endif
     }
-    return expr;
+    return state;
 }
 
 /* Gets the free variables in the expression. */ 
