@@ -65,13 +65,19 @@ int main(int argc, char* argv[]) {
                     ">= 1 2","!= 2 2",
                     "(lambda x (lambda y + (* x x) (* y y))) 3 4",
                     "(lambda x (lambda y y x)) 1 (lambda x x)",
-                    "+ (lambda x x) 1"
+                    "+ (lambda x x) 1",
+                    "Y (lambda t (lambda n (= n 1) 1 (* n (t (- n 1))))) 3",
+                    "Y (lambda t (lambda n (= n 1) 1 (+ n (t (- n 1))))) 4",
+                    "Y (lambda t (lambda n (or (= n 1) (= n 2)) 1 (+ (t (- n 1)) (t (- n 2))))) 7",
+                    "(and (not (= 2 3)) (= 2 2))",
+                    "(or (= 1 1) ((lambda x x x) (lambda x x x)))"
                     };
     int i;
-    for(i=0;i<88;i++) {
+    for(i=0;i<93;i++) {
         fprintf(out,"Expression: %s\n",exprs[i]);
         useStringBuffer(exprs[i]);
         yyparse();
+        deleteStringBuffer();
         #ifdef DEBUG
             fprintf(errOut,"Parse tree =>\n");
             printTree(tree,errOut);
@@ -83,7 +89,6 @@ int main(int argc, char* argv[]) {
         fprintf(out,"\n");
         deleteTree(tree);
         tree=NULL;
-        deleteStringBuffer();
     }
 
     char *exprs1[] = {"(lambda x (lambda x x))",
