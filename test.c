@@ -65,25 +65,29 @@ int main(int argc, char* argv[]) {
                     ">= 1 2","!= 2 2",
                     "(lambda x (lambda y + (* x x) (* y y))) 3 4",
                     "(lambda x (lambda y y x)) 1 (lambda x x)",
-                    "+ (lambda x x) 1"
+                    "+ (lambda x x) 1",
+                    "(and (= 2 3) (= 2 2))", "(and (not (= 2 3)) (= 2 2))"
                     };
     int i;
-    for(i=0;i<88;i++) {
+    for(i=0;i<90;i++) {
         fprintf(out,"Expression: %s\n",exprs[i]);
         useStringBuffer(exprs[i]);
         yyparse();
+        deleteStringBuffer();
         #ifdef DEBUG
             fprintf(errOut,"Parse tree =>\n");
             printTree(tree,errOut);
             fprintf(errOut,"\n");
         #endif
         tree = evaluate(tree);
-        fprintf(out,"\t->  ");
-        printExpression(tree,out);
+        if(tree!=NULL) {
+            fprintf(out,"->  ");
+            printExpression(tree,out);
+            fprintf(out,"\n");
+            deleteTree(tree);
+            tree=NULL;
+        }
         fprintf(out,"\n");
-        deleteTree(tree);
-        tree=NULL;
-        deleteStringBuffer();
     }
 
     char *exprs1[] = {"(lambda x (lambda x x))",
@@ -101,11 +105,14 @@ int main(int argc, char* argv[]) {
         yyparse();
         deleteStringBuffer();
         tree = alphaConversion(tree);
-        fprintf(out,"\t->  ");
-        printExpression(tree,out);
+        if(tree!=NULL) {
+            fprintf(out,"->  ");
+            printExpression(tree,out);
+            fprintf(out,"\n");
+            deleteTree(tree);
+            tree=NULL;
+        }
         fprintf(out,"\n");
-        deleteTree(tree);
-        tree=NULL;
     }
 
     return 0;

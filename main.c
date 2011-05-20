@@ -41,10 +41,12 @@ int main(int argc, char* argv[]) {
         #endif
         
         tree = evaluate(tree);
-        fprintf(out,"-> ");
-        printExpression(tree,out);
-        deleteTree(tree);
-        tree=NULL;
+        if(tree!=NULL) {
+            fprintf(out,"-> ");
+            printExpression(tree,out);
+            deleteTree(tree);
+            tree=NULL;
+        }
         fprintf(out,"\n\n");
     }
     return 0;
