@@ -161,3 +161,8 @@ void printExpression(TreeNode* expr, FILE* stream) {
             fprintf(stream,"Unknown expression kind.\n");
     }
 }
+
+int isValue(TreeNode *expr) {
+    return expr!=NULL 
+        && (expr->kind==IdK || expr->kind==ConstK || expr->kind==AbsK);
+}

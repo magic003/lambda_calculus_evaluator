@@ -24,4 +24,7 @@ void printTree(TreeNode * tree, FILE* stream);
 
 /* prints the expression in a human readable format. */
 void printExpression(TreeNode *expr, FILE* stream);
+
+/* Tests if the expression is a value. */
+int isValue(TreeNode *expr);
 #endif
