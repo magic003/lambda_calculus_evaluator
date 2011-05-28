@@ -24,6 +24,65 @@ static TreeNode* resolveFunction(const char* name) {
     return NULL;
 }
 
+/* Perform reductions to the expression of type application or primitive. 
+ * Returns 1 if successful, otherwise failed.  
+ */
+static int performReduction(State* state) {
+    if(state->controlStr->kind==AppK) {
+        if(state->controlStr->children[0]->kind==ConstK) {
+            fprintf(errOut, "Error: cannot apply a constant to any argument.\n");
+            fprintf(errOut, "\t\t");
+            printExpression(state->controlStr,errOut);
+            cc_cleanup(state);
+            return 0;
+        }else if(state->controlStr->children[0]->kind==IdK) {
+            // find function from builtin and standard library
+            TreeNode* fun = resolveFunction(state->controlStr->children[0]->name);
+            if(fun==NULL) {
+                fprintf(errOut, "Error: %s is not a predefined function.\n", state->controlStr->children[0]->name);
+                cc_cleanup(state);
+                return 0;
+            }
+            deleteTree(state->controlStr->children[0]);
+            state->controlStr->children[0] = fun;
+        } else {
+            TreeNode *tmp = betaReduction(state->controlStr);
+            if(state->context!=NULL) {
+                if(state->context->expr->children[0]==state->controlStr) {
+                    state->context->expr->children[0] = tmp;
+                }else {
+                    state->context->expr->children[1] = tmp;
+                }
+            }
+            state->controlStr = tmp;
+        }
+    }else if(state->controlStr->kind==PrimiK) {
+        // only perform primitive operation if operands are constants
+        if(state->controlStr->children[0]->kind==ConstK 
+            && state->controlStr->children[1]->kind==ConstK) {
+            TreeNode* tmp  = evalPrimitive(state->controlStr);
+            if(state->context!=NULL) {
+                if(state->context->expr->children[0]==state->controlStr) {
+                    state->context->expr->children[0] = tmp;
+                } else {
+                    state->context->expr->children[1] = tmp;
+                }
+            }
+            deleteTree(state->controlStr);
+            state->controlStr = tmp;
+        } else {
+            fprintf(errOut, "Error: %s can only be applied on constants.\n", state->controlStr->name);
+            cc_cleanup(state);
+            return 0;
+        }
+    }else {
+        fprintf(errOut,"Error: Cannot evaluate unkown expression kind.\n");
+        cc_cleanup(state);
+        return 0;
+    }
+    return 1;
+}
+
 TreeNode * evaluate(TreeNode *expr) {
     State * state = cc_newState();
     state->controlStr = expr;
@@ -31,12 +90,20 @@ TreeNode * evaluate(TreeNode *expr) {
     Context * ctx = NULL;
     while(!cc_canTerminate(state)) {
         if(isValue(state->controlStr)) {
-            // pop an expression from the context
-            state->controlStr = state->context->expr;
-            ctx = state->context;
-            state->context = state->context->next;
-            cc_deleteContext(ctx);
-            ctx = NULL;
+            // second child is a value
+            if(isValue(state->context->expr->children[1])) {
+                // pop an expression from the context
+                state->controlStr = state->context->expr;
+                ctx = state->context;
+                state->context = state->context->next;
+                cc_deleteContext(ctx);
+                ctx = NULL;
+                if(!performReduction(state)) {
+                    return NULL;
+                }
+            } else {
+                state->controlStr = state->context->expr->children[1];
+            }
         }else {
             if(!isValue(state->controlStr->children[0])
                 || !isValue(state->controlStr->children[1])) {
@@ -51,58 +118,8 @@ TreeNode * evaluate(TreeNode *expr) {
                     state->controlStr = state->controlStr->children[1];
                 }
             } else { // evaluate control string
-                if(state->controlStr->kind==AppK) {
-                    if(state->controlStr->children[0]->kind==ConstK) {
-                        fprintf(errOut, "Error: cannot apply a constant to any argument.\n");
-                        fprintf(errOut, "\t\t");
-                        printExpression(state->controlStr,errOut);
-                        cc_cleanup(state);
-                        return NULL;
-                    }else if(state->controlStr->children[0]->kind==IdK) {
-                        // find function from builtin and standard library
-                        TreeNode* fun = resolveFunction(state->controlStr->children[0]->name);
-                        if(fun==NULL) {
-                            fprintf(errOut, "Error: %s is not a predefined function.\n", state->controlStr->children[0]->name);
-                            cc_cleanup(state);
-                            return NULL;
-                        }
-                        deleteTree(state->controlStr->children[0]);
-                        state->controlStr->children[0] = fun;
-                    } else {
-                        TreeNode *tmp = betaReduction(state->controlStr);
-                        if(state->context!=NULL) {
-                            if(state->context->expr->children[0]==state->controlStr) {
-                                state->context->expr->children[0] = tmp;
-                            }else {
-                                state->context->expr->children[1] = tmp;
-                            }
-                        }
-                        state->controlStr = tmp;
-                    }
-                }else if(state->controlStr->kind==PrimiK) {
-                    // only perform primitive operation if operands are constants
-                    if(state->controlStr->children[0]->kind==ConstK 
-                        && state->controlStr->children[1]->kind==ConstK) {
-                        TreeNode* tmp  = evalPrimitive(state->controlStr);
-                        if(state->context!=NULL) {
-                            if(state->context->expr->children[0]==state->controlStr) {
-                                state->context->expr->children[0] = tmp;
-                            } else {
-                                state->context->expr->children[1] = tmp;
-                            }
-                        }
-                        deleteTree(state->controlStr);
-                        state->controlStr = tmp;
-                    } else {
-                        fprintf(errOut, "Error: %s can only be applied on constants.\n", state->controlStr->name);
-                        cc_cleanup(state);
-                        return NULL;
-                    }
-                }else {
-                    fprintf(errOut,"Error: Cannot evaluate unkown expression kind.\n");
-                    cc_cleanup(state);
+                if(!performReduction(state)) {
                     return NULL;
-
                 }
             }
         }
