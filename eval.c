@@ -90,8 +90,8 @@ TreeNode * evaluate(TreeNode *expr) {
     Context * ctx = NULL;
     while(!cc_canTerminate(state)) {
         if(isValue(state->controlStr)) {
-            // second child is a value
-            if(isValue(state->context->expr->children[1])) {
+            // control string is the right child
+            if(state->controlStr==state->context->expr->children[1]) {
                 // pop an expression from the context
                 state->controlStr = state->context->expr;
                 ctx = state->context;
