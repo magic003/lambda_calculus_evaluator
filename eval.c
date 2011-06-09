@@ -9,7 +9,7 @@
 #include "builtin.h"
 #include "primitive.h"
 #include "stdlib.h" // standard library
-#include "cc_machine.h"
+#include "ck_machine.h"
 #include "eval.h"
 
 /* Search a function in builtin library and standard library by name. */
@@ -33,25 +33,27 @@ static int performReduction(State* state) {
             fprintf(errOut, "Error: cannot apply a constant to any argument.\n");
             fprintf(errOut, "\t\t");
             printExpression(state->controlStr,errOut);
-            cc_cleanup(state);
+            ck_cleanup(state);
             return 0;
         }else if(state->controlStr->children[0]->kind==IdK) {
             // find function from builtin and standard library
             TreeNode* fun = resolveFunction(state->controlStr->children[0]->name);
             if(fun==NULL) {
                 fprintf(errOut, "Error: %s is not a predefined function.\n", state->controlStr->children[0]->name);
-                cc_cleanup(state);
+                ck_cleanup(state);
                 return 0;
             }
             deleteTree(state->controlStr->children[0]);
             state->controlStr->children[0] = fun;
         } else {
             TreeNode *tmp = betaReduction(state->controlStr);
-            if(state->context!=NULL) {
-                if(state->context->expr->children[0]==state->controlStr) {
-                    state->context->expr->children[0] = tmp;
-                }else {
-                    state->context->expr->children[1] = tmp;
+            if(state->continuation!=NULL) {
+                if(state->continuation->tag==ArgKK
+                    || state->continuation->tag==OpdKK) {
+                    state->continuation->expr->children[0] = tmp;
+                }else if(state->continuation->tag==FunKK
+                    || state->continuation->tag==OprKK) {
+                    state->continuation->expr->children[1] = tmp;
                 }
             }
             state->controlStr = tmp;
@@ -61,80 +63,87 @@ static int performReduction(State* state) {
         if(state->controlStr->children[0]->kind==ConstK 
             && state->controlStr->children[1]->kind==ConstK) {
             TreeNode* tmp  = evalPrimitive(state->controlStr);
-            if(state->context!=NULL) {
-                if(state->context->expr->children[0]==state->controlStr) {
-                    state->context->expr->children[0] = tmp;
-                } else {
-                    state->context->expr->children[1] = tmp;
+            if(state->continuation!=NULL) {
+                if(state->continuation->tag==ArgKK
+                    || state->continuation->tag==OpdKK) {
+                    state->continuation->expr->children[0] = tmp;
+                }else if(state->continuation->tag==FunKK
+                    || state->continuation->tag==OprKK) {
+                    state->continuation->expr->children[1] = tmp;
                 }
             }
             deleteTree(state->controlStr);
             state->controlStr = tmp;
         } else {
             fprintf(errOut, "Error: %s can only be applied on constants.\n", state->controlStr->name);
-            cc_cleanup(state);
+            ck_cleanup(state);
             return 0;
         }
     }else {
         fprintf(errOut,"Error: Cannot evaluate unkown expression kind.\n");
-        cc_cleanup(state);
+        ck_cleanup(state);
         return 0;
     }
     return 1;
 }
 
 TreeNode * evaluate(TreeNode *expr) {
-    State * state = cc_newState();
+    State * state = ck_newState();
     state->controlStr = expr;
 
-    Context * ctx = NULL;
-    while(!cc_canTerminate(state)) {
+    Continuation * ctn = NULL;
+    while(!ck_canTerminate(state)) {
         if(isValue(state->controlStr)) {
-            // control string is the right child
-            if(state->controlStr==state->context->expr->children[1]) {
-                // pop an expression from the context
-                state->controlStr = state->context->expr;
-                ctx = state->context;
-                state->context = state->context->next;
-                cc_deleteContext(ctx);
-                ctx = NULL;
-                if(!performReduction(state)) {
+            switch(state->continuation->tag) {
+                case FunKK: // pop up the continuation
+                case OprKK:
+                    state->controlStr = state->continuation->expr;
+                    ctn = state->continuation;
+                    state->continuation = ctn->next;
+                    ck_deleteContinuation(ctn);
+                    ctn = NULL;
+                    if(!performReduction(state)) {
+                        return NULL;
+                    }
+                    break;
+                case ArgKK: // change continuation to FunKK
+                    state->continuation->tag = FunKK;
+                    state->controlStr = state->continuation->expr->children[1];
+                    break;
+                case OpdKK: // change to OprKK
+                    state->continuation->tag = OprKK;
+                    state->controlStr = state->continuation->expr->children[1];
+                    break;
+                default:
+                    fprintf(errOut,"Error: Unknown continuation tag.\n");
+                    ck_cleanup(state);
                     return NULL;
-                }
-            } else {
-                state->controlStr = state->context->expr->children[1];
+                    
             }
         }else {
-            if(!isValue(state->controlStr->children[0])
-                || !isValue(state->controlStr->children[1])) {
-                // push the current expression into context
-                ctx = cc_newContext();
-                ctx->expr = state->controlStr;
-                ctx->next = state->context;
-                state->context = ctx;
-                if(!isValue(state->controlStr->children[0])) {
-                    state->controlStr = state->controlStr->children[0];
-                }else {
-                    state->controlStr = state->controlStr->children[1];
-                }
-            } else { // evaluate control string
-                if(!performReduction(state)) {
-                    return NULL;
-                }
+            if(state->controlStr->kind==AppK) { // push an ArgKK continuation
+                ctn = ck_newContinuation(ArgKK);
+            }else if(state->controlStr->kind==PrimiK) { // push OpdKK continuation
+                ctn = ck_newContinuation(OpdKK);
             }
+            ctn->expr = state->controlStr;
+            ctn->next = state->continuation;
+            state->continuation = ctn;
+            state->controlStr = state->controlStr->children[0];
+            ctn = NULL;
         }
         #ifdef DEBUG
             // print intermediate steps
-            if(!cc_canTerminate(state)) {
+            if(!ck_canTerminate(state)) {
                 fprintf(out,"-> ");
-                printExpression(cc_getProgram(state),out);
+                printExpression(ck_getProgram(state),out);
                 fprintf(out,"\n");
             }
         #endif
     }
 
     TreeNode* result = state->controlStr;
-    cc_deleteState(state);
+    ck_deleteState(state);
     return result;
 }
 
