@@ -9,7 +9,7 @@
 #include "builtin.h"
 #include "primitive.h"
 #include "stdlib.h" // standard library
-#include "cc_machine.h"
+#include "ck_machine.h"
 #include "eval.h"
 
 /* Search a function in builtin library and standard library by name. */
@@ -24,98 +24,105 @@ static TreeNode* resolveFunction(const char* name) {
     return NULL;
 }
 
-/* Perform reductions on the expression of type application or primitive. 
+/* 
+ * Perform reductions on the expression of type application or primitive. 
  * Return 1 is successful, otherwise failed.
  */
 static int performReduction(State* state) {
-    Context* ctx = NULL;
+    Continuation* ctn = NULL;
     if(state->controlStr->kind==AppK) {
         if(!isValue(state->controlStr->children[0])) {
-            // push the control string to context
-            ctx = cc_newContext();
-            ctx->expr = state->controlStr;
-            ctx->next = state->context;
-            state->context = ctx;
+            // push the control string to continuation
+            ctn = ck_newContinuation(ArgKK);
+            ctn->expr = state->controlStr;
+            ctn->next = state->continuation;
+            state->continuation = ctn;
             state->controlStr = state->controlStr->children[0];
+            ctn = NULL;
         }else if(state->controlStr->children[0]->kind==ConstK) {
             fprintf(errOut, "Error: cannot apply a constant to any argument.\n");
             fprintf(errOut, "\t\t");
             printExpression(state->controlStr,errOut);
-            cc_cleanup(state);
+            ck_cleanup(state);
             return 0;
         }else if(state->controlStr->children[0]->kind==IdK) {
             // find function from builtin and standard library
             TreeNode* fun = resolveFunction(state->controlStr->children[0]->name);
             if(fun==NULL) {
                 fprintf(errOut, "Error: %s is not a predefined function.\n", state->controlStr->children[0]->name);
-                cc_cleanup(state);
+                ck_cleanup(state);
                 return 0;
             }
             deleteTree(state->controlStr->children[0]);
             state->controlStr->children[0] = fun;
         } else {
             TreeNode *tmp = betaReduction(state->controlStr);
-            if(state->context!=NULL) {
-                if(state->context->expr->children[0]==state->controlStr) {
-                    state->context->expr->children[0] = tmp;
+            if(state->continuation!=NULL) {
+                if(state->continuation->tag==ArgKK
+                    || state->continuation->tag==OpdKK) {
+                    state->continuation->expr->children[0] = tmp;
                 }else {
-                    state->context->expr->children[1] = tmp;
+                    state->continuation->expr->children[1] = tmp;
                 }
             }
             state->controlStr = tmp;
         }
     }else if(state->controlStr->kind==PrimiK) {
-        if(!isValue(state->controlStr->children[0])
-            || !isValue(state->controlStr->children[1])) {
-            // push the current expression into context
-            ctx = cc_newContext();
-            ctx->expr = state->controlStr;
-            ctx->next = state->context;
-            state->context = ctx;
-            if(!isValue(state->controlStr->children[0])) {
-                state->controlStr = state->controlStr->children[0];
-            }else {
-                state->controlStr = state->controlStr->children[1];
-            }
+        if(!isValue(state->controlStr->children[0])) {
+            ctn = ck_newContinuation(OpdKK);
+            ctn->expr = state->controlStr;
+            ctn->next = state->continuation;
+            state->continuation = ctn;
+            ctn = NULL;
+            state->controlStr = state->controlStr->children[0];
+
+        } else if(!isValue(state->controlStr->children[1])) {
+            ctn = ck_newContinuation(OprKK);
+            ctn->expr = state->controlStr;
+            ctn->next = state->continuation;
+            state->continuation = ctn;
+            ctn = NULL;
+            state->controlStr = state->controlStr->children[1];
         } else if(state->controlStr->children[0]->kind==ConstK 
             && state->controlStr->children[1]->kind==ConstK) {
             // only perform primitive operation if operands are constants
             TreeNode* tmp  = evalPrimitive(state->controlStr);
-            if(state->context!=NULL) {
-                if(state->context->expr->children[0]==state->controlStr) {
-                    state->context->expr->children[0] = tmp;
-                } else {
-                    state->context->expr->children[1] = tmp;
+            if(state->continuation!=NULL) {
+                if(state->continuation->tag==ArgKK
+                    || state->continuation->tag==OpdKK) {
+                    state->continuation->expr->children[0] = tmp;
+                }else {
+                    state->continuation->expr->children[1] = tmp;
                 }
             }
             deleteTree(state->controlStr);
             state->controlStr = tmp;
         } else {
             fprintf(errOut, "Error: %s can only be applied on constants.\n", state->controlStr->name);
-            cc_cleanup(state);
+            ck_cleanup(state);
             return 0;
         }
     }else {
         fprintf(errOut,"Error: Cannot evaluate unkown expression kind.\n");
-        cc_cleanup(state);
+        ck_cleanup(state);
         return 0;
     }
     return 1;
 }
 
 TreeNode * evaluate(TreeNode *expr) {
-    State * state = cc_newState();
+    State * state = ck_newState();
     state->controlStr = expr;
 
-    Context * ctx = NULL;
-    while(!cc_canTerminate(state)) {
+    Continuation * ctn = NULL;
+    while(!ck_canTerminate(state)) {
         if(isValue(state->controlStr)) {
-            // pop an expression from the context
-            state->controlStr = state->context->expr;
-            ctx = state->context;
-            state->context = state->context->next;
-            cc_deleteContext(ctx);
-            ctx = NULL;
+            // pop a continuation
+            state->controlStr = state->continuation->expr;
+            ctn = state->continuation;
+            state->continuation = state->continuation->next;
+            ck_deleteContinuation(ctn);
+            ctn = NULL;
         }
         // perform the reduction
         if(!performReduction(state)) {
@@ -123,16 +130,16 @@ TreeNode * evaluate(TreeNode *expr) {
         }
         #ifdef DEBUG
             // print intermediate steps
-            if(!cc_canTerminate(state)) {
+            if(!ck_canTerminate(state)) {
                 fprintf(out,"-> ");
-                printExpression(cc_getProgram(state),out);
+                printExpression(ck_getProgram(state),out);
                 fprintf(out,"\n");
             }
         #endif
     }
 
     TreeNode* result = state->controlStr;
-    cc_deleteState(state);
+    ck_deleteState(state);
     return result;
 }
 
