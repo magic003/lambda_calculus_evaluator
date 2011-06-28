@@ -13,6 +13,11 @@ TreeNode * newTreeNode(ExprKind kind);
 /* reallocates the memory space for a tree. */
 void deleteTree(TreeNode *tree);
 
+/*
+ * Deletes a single tree node. Doesn't delete children nodes recursively.
+ */
+void deleteTreeNode(TreeNode *node);
+
 /* duplicates the tree by allocating a new memory space. */
 TreeNode * duplicateTree(TreeNode *tree);
 

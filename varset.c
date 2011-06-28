@@ -141,3 +141,47 @@ int contains(VarSet* set, const char *var) {
     }
     return 0;
 }
+
+int vs_empty(VarSet* set) {
+    int i;
+    for(i=0;i<SIZE;i++) {
+        if(set->hashset[i]!=NULL) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+VarSetList* vs_asList(VarSet* set) {
+    VarSetList *list = NULL;
+    VarSetList *cur = NULL;
+    int i;
+    for(i=0;i<SIZE;i++) {
+        if(set->hashset[i]!=NULL) {
+            BucketList bucket = set->hashset[i];
+            while(bucket!=NULL) {
+                VarSetList *l = malloc(sizeof(VarSetList));
+                l->name = stringCopy(bucket->name);
+                l->next = NULL;
+                if(list==NULL) {
+                    cur = list = l;
+                }else {
+                    cur->next = l;
+                    cur = cur->next;
+                }
+                bucket = bucket->next;
+            }
+        }
+    }
+    return list;
+}
+
+void vs_deleteVarSetList(VarSetList *list) {
+    VarSetList *l = NULL;
+    while(list!=NULL) {
+        l = list;
+        list = list->next;
+        free(l->name);
+        free(l);
+    }
+}
