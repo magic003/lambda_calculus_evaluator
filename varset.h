@@ -21,6 +21,12 @@ typedef struct varset {
     BucketList hashset[SIZE];
 } VarSet;
 
+/* Free variable list. */
+typedef struct varsetlist {
+    char *name;
+    struct varsetlist *next;
+} VarSetList;
+
 /* Create a variable set. */
 VarSet * newVarSet(void);
 
@@ -38,4 +44,13 @@ void unionVarSet(VarSet* newSet, VarSet* set1, VarSet* set2);
 
 /* Test if the set contains the variable. */
 int contains(VarSet* set, const char *var);
+
+/* Returns true if the set is empty. */
+int vs_empty(VarSet* set);
+
+/* Returns the variable set as a list. */
+VarSetList* vs_asList(VarSet *set);
+
+/* Deletes the variable set list. */
+void vs_deleteVarSetList(VarSetList *list);
 #endif

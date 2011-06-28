@@ -26,6 +26,7 @@ int main(int argc, char* argv[]) {
                     "(lambda x x) y",
                     "(lambda x x) (lambda y y)",
                     "(lambda x x) (lambda y y) z",
+                    "(lambda x x) (lambda y y) 1",
                     "(lambda x x x)",
                     "(lambda x (lambda x x))",
                     "(lambda x (lambda y x))",
@@ -48,6 +49,7 @@ int main(int argc, char* argv[]) {
                     "(((lambda x x) u) v)",
                     "(u ((lambda x x) v))",
                     "((lambda x x) ((lambda y y) z))",
+                    "((lambda x x) ((lambda y y) 1))",
                     "(lambda f (lambda x f (f x)))",
                     "(lambda f (lambda x f (f (f x))))",
                     "(lambda n (lambda f (lambda x f (n f x))))",
@@ -62,14 +64,15 @@ int main(int argc, char* argv[]) {
                     "(lambda x + x 1)","+","(lambda x (lambda y + x y))",
                     "- 1 1","* 1 1","/ 1 1","% 1 1","+ (+ 1 2) 3", "+ y",
                     "* (+ 1 2) 3","^ 2 4","< 1 2","> 1 2","= 2 2","<= 1 2",
-                    ">= 1 2","!= 2 2",
+                    ">= 1 2","!= 2 2","1 1","x 1",
                     "(lambda x (lambda y + (* x x) (* y y))) 3 4",
                     "(lambda x (lambda y y x)) 1 (lambda x x)",
+                    "(lambda x (lambda y x (x y)) (x 1)) (lambda x x)",
                     "+ (lambda x x) 1",
                     "(and (= 2 3) (= 2 2))", "(and (not (= 2 3)) (= 2 2))"
                     };
     int i;
-    for(i=0;i<90;i++) {
+    for(i=0;i<95;i++) {
         fprintf(out,"Expression: %s\n",exprs[i]);
         useStringBuffer(exprs[i]);
         yyparse();

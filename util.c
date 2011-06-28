@@ -36,6 +36,15 @@ void deleteTree(TreeNode* tree) {
     }
 }
 
+void deleteTreeNode(TreeNode *node) {
+    if(node!=NULL) {
+        if(node->name!=NULL) {
+            free(node->name);
+        }
+        free(node);
+    }
+}
+
 TreeNode *duplicateTree(TreeNode* tree) {
     if(tree!=NULL) {
         TreeNode *result = newTreeNode(tree->kind);
@@ -164,5 +173,5 @@ void printExpression(TreeNode* expr, FILE* stream) {
 
 int isValue(TreeNode *expr) {
     return expr!=NULL 
-        && (expr->kind==IdK || expr->kind==ConstK || expr->kind==AbsK);
+        && (expr->kind==ConstK || expr->kind==AbsK);
 }
