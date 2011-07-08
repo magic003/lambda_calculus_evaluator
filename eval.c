@@ -80,6 +80,10 @@ TreeNode * evaluate(TreeNode *expr) {
                 state->closure = cek_newClosure(ctn->closure->expr,env);
                 if(!performReduction(state)) {
                     error = 1;
+                    // should delete the continuation
+                    ctn->closure->expr = NULL;
+                    cek_deleteClosure(ctn->closure);
+                    cek_deleteContinuation(ctn);
                     break;
                 }
                 // delete the continuation
@@ -282,6 +286,7 @@ static int performReduction(State* state) {
             fprintf(errOut, "Expression:\t");
             printExpression(state->closure->expr,errOut);
             fprintf(errOut,"\n");
+            deleteTree(state->closure->expr->children[0]);
             return 0;
         }else if(state->closure->expr->children[0]->kind==IdK) {
             // find function from builtin and standard library
@@ -310,6 +315,9 @@ static int performReduction(State* state) {
              */
             state->closure->expr->children[0]->children[1] = NULL;
             attachChild(state,tmp); /* attach to parent. */
+            // delete abstraction part, the other part will be deleted
+            // when delete the closure
+            deleteTree(state->closure->expr->children[0]);
             // set body as control string
             state->closure->expr = tmp;
         }
@@ -319,9 +327,20 @@ static int performReduction(State* state) {
             && state->closure->expr->children[1]->kind==ConstK) {
             TreeNode* tmp  = evalPrimitive(state->closure->expr);
             attachChild(state,tmp); /* attach to parent. */
+            /* 
+             * Second operand is kept in an environment and it will be
+             * deleted when delete the environment. So only need to delete
+             * first operand here.
+             */
+            deleteTree(state->closure->expr->children[0]);
+            state->closure->expr = NULL;
+            cek_deleteClosure(state->closure);
             state->closure = cek_newClosure(tmp,NULL);
         } else {
             fprintf(errOut, "Error: %s can only be applied on constants.\n", state->closure->expr->name);
+            // delete first operand, the other operand will be deleted
+            // when delete the closure
+            deleteTree(state->closure->expr->children[0]);
             return 0;
         }
     }else {
