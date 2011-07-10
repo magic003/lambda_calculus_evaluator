@@ -60,7 +60,15 @@ TreeNode * evaluate(TreeNode *expr) {
             if(state->continuation==NULL) {
                 // if the control string is an abstraction, need to substitute
                 // free variables in it using the environment for it.
-                state->closure->expr = resolveFreeVariables(state->closure->expr,state->closure->env);
+                TreeNode *tmp = resolveFreeVariables(state->closure->expr,state->closure->env);
+                if(tmp==NULL) {
+                    // delete children
+                    deleteTree(state->closure->expr->children[0]);
+                    deleteTree(state->closure->expr->children[1]);
+                    error = 1;
+                } else {
+                    state->closure->expr = tmp;
+                }
                 break;
             } else if(state->continuation->tag==ArgKK) {
                 // Pop the current continuation
@@ -73,9 +81,17 @@ TreeNode * evaluate(TreeNode *expr) {
                  * as NULL and set it in performReduction().
                  */
                 env = cek_newEnvironment(NULL,cek_newClosure(ctn->closure->expr->children[1],ctn->closure->env),state->closure->env);
+                // delete the current closure
+                state->closure->expr = NULL;
+                cek_deleteClosure(state->closure);
+
                 state->closure = cek_newClosure(ctn->closure->expr,env);
                 if(!performReduction(state)) {
                     error = 1;
+                    // should delete the continuation
+                    ctn->closure->expr = NULL;
+                    cek_deleteClosure(ctn->closure);
+                    cek_deleteContinuation(ctn);
                     break;
                 }
                 // delete the continuation
@@ -92,6 +108,8 @@ TreeNode * evaluate(TreeNode *expr) {
                 state->closure = ctn->closure;
                 if(!performReduction(state)) {
                     error = 1;
+                    // should delete the continuation
+                    cek_deleteContinuation(ctn);
                     break;
                 }
                 // delete the continuation
@@ -278,6 +296,7 @@ static int performReduction(State* state) {
             fprintf(errOut, "Expression:\t");
             printExpression(state->closure->expr,errOut);
             fprintf(errOut,"\n");
+            deleteTree(state->closure->expr->children[0]);
             return 0;
         }else if(state->closure->expr->children[0]->kind==IdK) {
             // find function from builtin and standard library
@@ -306,6 +325,9 @@ static int performReduction(State* state) {
              */
             state->closure->expr->children[0]->children[1] = NULL;
             attachChild(state,tmp); /* attach to parent. */
+            // delete the abstraction part, the other part will be deleted
+            // when delete the closure
+            deleteTree(state->closure->expr->children[0]);
             // set body as control string
             state->closure->expr = tmp;
         }
@@ -330,10 +352,22 @@ static int performReduction(State* state) {
             && state->closure->expr->children[1]->kind==ConstK) {
             // only perform primitive operation if operands are constants
             TreeNode *tmp  = evalPrimitive(state->closure->expr);
-            state->closure = cek_newClosure(tmp,NULL);
             attachChild(state,tmp); /* attach to parent */
+            /* 
+             * Second operand is kept in an environment and it will be
+             * deleted when delete the environment. So only need to delete
+             * first operand here.
+             */
+            deleteTree(state->closure->expr->children[0]);
+            deleteTree(state->closure->expr->children[1]);
+            
+            state->closure = cek_newClosure(tmp,NULL);
         } else {
             fprintf(errOut, "Error: %s can only be applied on constants.\n", state->closure->expr->name);
+            // delete first operand, the other operand will be deleted
+            // when delete the closure
+            deleteTree(state->closure->expr->children[0]);
+            deleteTree(state->closure->expr->children[1]);
             return 0;
         }
     }else {

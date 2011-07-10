@@ -39,6 +39,9 @@ void cek_deleteEnvironment(Environment *env) {
     if(env==NULL) return;
 
     free(env->name);
+    // should delete the total tree
+    deleteTree(env->closure->expr);
+    env->closure->expr = NULL;
     cek_deleteClosure(env->closure);
     Environment *parent = env->parent;
     free(env);
@@ -94,6 +97,9 @@ void cek_cleanup(State* state) {
     Continuation* ctn = NULL;
     while((ctn=state->continuation)!=NULL) {
         state->continuation = ctn->next;
+        if(ctn->tag==ArgKK) {
+            deleteTree(ctn->closure->expr->children[1]);
+        }
         cek_deleteClosure(ctn->closure);
         cek_deleteContinuation(ctn);
     }
