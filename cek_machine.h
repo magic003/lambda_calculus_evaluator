@@ -51,7 +51,10 @@ State* cek_newState(void);
 /* Free a state. */
 void cek_deleteState(State* state);
 
-/* Allocates a new environment with parent environment specified. */
+/* 
+ * Allocates a new environment with parent environment specified. 
+ * The name will be copied.
+ */
 Environment* cek_newEnvironment(const char *name, Closure *closure, Environment *parent);
 /* Free an environment. */
 void cek_deleteEnvironment(Environment *env);

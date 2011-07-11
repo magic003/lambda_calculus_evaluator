@@ -8,6 +8,18 @@
 #include "util.h"
 #include "cek_machine.h"
 
+/*
+ * Some design notes:
+ *  - Expression is splitted into pieces and  kept in continuations, so 
+ *    don't need to worry about the parent/child relationships when deleting
+ *    or adding an expressioin.
+ *  - Deleting a closure won't delete the expression in it. It is the 
+ *    programmer's responsibility to delete it.
+ *  - Environment is shared among closures, while closures are not shared. 
+ *    So after each step, the closure should be deleted explicitly, but
+ *    an environment is only deleted when its refCount is 0.
+ */
+
 State* cek_newState(void) {
     State* st = (State*) malloc(sizeof(State));
     st->closure = NULL;
@@ -39,9 +51,8 @@ void cek_deleteEnvironment(Environment *env) {
     if(env==NULL) return;
 
     free(env->name);
-    // should delete the total tree
+    // delete closure
     deleteTree(env->closure->expr);
-    env->closure->expr = NULL;
     cek_deleteClosure(env->closure);
     Environment *parent = env->parent;
     free(env);
@@ -64,11 +75,6 @@ Closure* cek_newClosure(TreeNode *expr, Environment *env) {
 }
 
 void cek_deleteClosure(Closure *closure) {
-    /* 
-     * For state cleanup, the child expression closure is deleted before
-     * the parent one, so if use deleteTree(), may have double free problem.
-     */
-    deleteTreeNode(closure->expr);
     if(closure->env!=NULL) {
         closure->env->refCount -= 1;
         if(closure->env->refCount==0) {
@@ -92,14 +98,13 @@ void cek_deleteContinuation(Continuation* continuation) {
 
 void cek_cleanup(State* state) {
     // delete the current closure
+    deleteTree(state->closure->expr);
     cek_deleteClosure(state->closure);
     // delete all continuations
     Continuation* ctn = NULL;
     while((ctn=state->continuation)!=NULL) {
         state->continuation = ctn->next;
-        if(ctn->tag==ArgKK) {
-            deleteTree(ctn->closure->expr->children[1]);
-        }
+        deleteTree(ctn->closure->expr);
         cek_deleteClosure(ctn->closure);
         cek_deleteContinuation(ctn);
     }

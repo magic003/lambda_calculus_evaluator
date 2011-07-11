@@ -18,7 +18,7 @@ TreeNode * tree = NULL;
 FILE* out;
 FILE* errOut;
 
-#define SIZE 98
+#define SIZE 99
 char* exprs[] = {"x","X","(lambda x x)","(lambda x y)",
                 "(lambda x (lambda y y))",
                 "(lambda x (lambda y x))",
@@ -74,7 +74,8 @@ char* exprs[] = {"x","X","(lambda x x)","(lambda x y)",
                 "Y (lambda t (lambda n (= n 1) 1 (+ n (t (- n 1))))) 4",
                 "Y (lambda t (lambda n (or (= n 1) (= n 2)) 1 (+ (t (- n 1)) (t (- n 2))))) 7",
                 "(and (not (= 2 3)) (= 2 2))",
-                "(or (= 1 1) ((lambda x x x) (lambda x x x)))"
+                "(or (= 1 1) ((lambda x x x) (lambda x x x)))",
+                "(lambda x x x) ((lambda a a) (lambda b b))"
                 };
 
 #define SIZE1 10
