@@ -13,12 +13,10 @@
 #include "eval.h"
 
 static TreeNode* resolveFunction(const char* name);
-static int performReduction(State* state);
 static Closure* lookupVariable(const char *name, Environment *env);
 static TreeNode* resolveFreeVariables(TreeNode *expr, Environment *env);
 static VarSet * FV(TreeNode *expr);
 static TreeNode *substitute(TreeNode *expr, TreeNode *var, TreeNode *sub);
-static void attachChild(const State *state, TreeNode *expr);
 
 TreeNode * evaluate(TreeNode *expr) {
     State * state = cek_newState();
@@ -43,7 +41,6 @@ TreeNode * evaluate(TreeNode *expr) {
                 // Replace the function name with function definition
                 deleteTreeNode(state->closure->expr);
                 state->closure->expr = fun;
-                attachChild(state,fun); /* attach fun to parent */
             } else {
                 /*
                  * Should not use the found closure directly, because it will
@@ -52,75 +49,108 @@ TreeNode * evaluate(TreeNode *expr) {
                  */
                 closure = cek_newClosure(duplicateTree(closure->expr),closure->env);
                 // replace the closure with mapped closure.
+                deleteTreeNode(state->closure->expr);
                 cek_deleteClosure(state->closure);
                 state->closure = closure;
-                attachChild(state,closure->expr); /* attach to parent */
             }
         } else if(isValue(state->closure->expr)) {
             if(state->continuation==NULL) {
                 // if the control string is an abstraction, need to substitute
                 // free variables in it using the environment for it.
-                state->closure->expr = resolveFreeVariables(state->closure->expr,state->closure->env);
-                break;
-            } else if(state->continuation->tag==FunKK
-                || state->continuation->tag==OprKK) {
-                // Pop the current continuation
-                ctn = state->continuation;
-                state->continuation = ctn->next;
-                // add the argument value to an environment
-                /*
-                 * The left child of the application may not be an
-                 * abstraction, so name is uncertain now. Leave it
-                 * as NULL and set it in performReduction().
-                 *
-                 * For a primitive application, no need to bind it to a
-                 * name, so set the name as NULL works as well.
-                 */
-                env = cek_newEnvironment(NULL,state->closure,ctn->closure->env);
-                state->closure = cek_newClosure(ctn->closure->expr,env);
-                if(!performReduction(state)) {
+                TreeNode *tmp = resolveFreeVariables(state->closure->expr,state->closure->env);
+                if(tmp==NULL) {
                     error = 1;
-                    // should delete the continuation
-                    ctn->closure->expr = NULL;
+                }else {
+                    state->closure->expr = tmp;
+                }
+                break;
+            } else if(state->continuation->tag==FunKK) {
+                // pop the continuation
+                ctn = state->continuation;
+                if(ctn->closure->expr->kind==ConstK) {
+                    fprintf(errOut, "Error: cannot apply a constant to any argument.\n");
+                    fprintf(errOut, "Expression:\t");
+                    printExpression(ctn->closure->expr,errOut);
+                    fprintf(errOut,"\n");
+                    error = 1;
+                    break;
+                }else if(ctn->closure->expr->kind==IdK) {
+                    // find function from builtin and standard library
+                    TreeNode* fun = resolveFunction(ctn->closure->expr->name);
+                    if(fun==NULL) {
+                        fprintf(errOut, "Error: %s is not a predefined function.\n", ctn->closure->expr->name);
+                        error = 1;
+                        break;
+                    }
+                    // replace the expression with function definition
+                    deleteTreeNode(ctn->closure->expr);
+                    state->closure->expr = fun;
+                } else {
+                    state->continuation = ctn->next;
+                    env = cek_newEnvironment(ctn->closure->expr->children[0]->name,state->closure,ctn->closure->env);
+                    state->closure = cek_newClosure(ctn->closure->expr->children[1],env);
+                    ctn->closure->expr->children[1] = NULL;
+                    deleteTree(ctn->closure->expr);
                     cek_deleteClosure(ctn->closure);
                     cek_deleteContinuation(ctn);
+                }
+            } else if(state->continuation->tag==OprKK) {
+                ctn = state->continuation;
+                // only perform primitive operation if operands are constants
+                if(ctn->closure->expr->children[0]->kind==ConstK 
+                    && state->closure->expr->kind==ConstK) {
+                    state->continuation = ctn->next;
+                    // reattach the second operand
+                    ctn->closure->expr->children[1] = state->closure->expr;
+                    TreeNode* tmp  = evalPrimitive(ctn->closure->expr);
+                    cek_deleteClosure(state->closure);
+                    state->closure = cek_newClosure(tmp,NULL);
+
+                    deleteTree(ctn->closure->expr);
+                    cek_deleteClosure(ctn->closure);
+                    cek_deleteContinuation(ctn);
+                } else {
+                    fprintf(errOut, "Error: %s can only be applied on constants.\n", ctn->closure->expr->name);
+                    error = 1;
                     break;
                 }
-                // delete the continuation
-                cek_deleteClosure(ctn->closure);
-                cek_deleteContinuation(ctn);
-                ctn = NULL;
-            } else if(state->continuation->tag==ArgKK
-                || state->continuation->tag==OpdKK) {
-                if(state->continuation->tag==ArgKK) {
-                    // change continuation to FunKK
-                    state->continuation->tag = FunKK;
-                } else {
-                    // change continuation to OprKK
-                    state->continuation->tag = OprKK;
-                }
+            } else if(state->continuation->tag==ArgKK) {
+                state->continuation->tag = FunKK;
+                // switch current closure with that in continuation
+                closure = state->closure;
+                state->closure = state->continuation->closure;
+                state->continuation->closure = closure;
+            } else if(state->continuation->tag==OpdKK) {
+                state->continuation->tag = OprKK;
+                // switch environment and expression
                 env = state->continuation->closure->env;
                 state->continuation->closure->env = state->closure->env;
-                state->closure->expr = state->continuation->closure->expr->children[1];
                 state->closure->env = env;
+                // attach the expression back to the PrimiK node
+                state->continuation->closure->expr->children[0] = state->closure->expr;
+                state->closure->expr = state->continuation->closure->expr->children[1];
+                // dettach the operand from PrimiK node
+                state->continuation->closure->expr->children[1] = NULL;
             } else {
                 fprintf(errOut,"Error: Unknown continuation tag.\n");
                 error = 1;
                 break;
             }
-        } else {
-            if(state->closure->expr->kind==AppK) { 
-                // push an ArgKK continuation
-                ctn = cek_newContinuation(ArgKK);
-            }else if(state->closure->expr->kind==PrimiK) { 
-                // push OpdKK continuation
-                ctn = cek_newContinuation(OpdKK);
-            }
+        } else if(state->closure->expr->kind==AppK) {
+            ctn = cek_newContinuation(ArgKK);
+            ctn->closure = cek_newClosure(state->closure->expr->children[1],state->closure->env);
+            ctn->next = state->continuation;
+            state->continuation = ctn;
+            TreeNode *tmp = state->closure->expr;
+            state->closure->expr = tmp->children[0];
+            deleteTreeNode(tmp);
+        } else if(state->closure->expr->kind==PrimiK) {
+            ctn = cek_newContinuation(OpdKK);
             ctn->closure = state->closure;
             ctn->next = state->continuation;
             state->continuation = ctn;
             state->closure = cek_newClosure(state->closure->expr->children[0],state->closure->env);
-            ctn = NULL;
+            state->closure->expr->children[0] = NULL;   // dettach
         }
     }
 
@@ -276,80 +306,6 @@ static TreeNode* resolveFunction(const char* name) {
     return NULL;
 }
 
-/* Perform reductions to the expression of type application or primitive. 
- * Returns 1 if successful, otherwise failed.  
- */
-static int performReduction(State* state) {
-    if(state->closure->expr->kind==AppK) {
-        if(state->closure->expr->children[0]->kind==ConstK) {
-            fprintf(errOut, "Error: cannot apply a constant to any argument.\n");
-            fprintf(errOut, "Expression:\t");
-            printExpression(state->closure->expr,errOut);
-            fprintf(errOut,"\n");
-            deleteTree(state->closure->expr->children[0]);
-            return 0;
-        }else if(state->closure->expr->children[0]->kind==IdK) {
-            // find function from builtin and standard library
-            TreeNode* fun = resolveFunction(state->closure->expr->children[0]->name);
-            if(fun==NULL) {
-                fprintf(errOut, "Error: %s is not a predefined function.\n", state->closure->expr->children[0]->name);
-                return 0;
-            }
-            // replace the expression with function definition
-            deleteTreeNode(state->closure->expr->children[0]);
-            state->closure->expr->children[0] = fun;
-        } else {    // It is a valid application
-            /*
-             * Set the name for current environment. It was left as NULL
-             * when creating the environment, because the left child is not
-             * guaranteed to be an abstraction so the parameter may not exist.
-             */
-            state->closure->env->name = stringCopy(state->closure->expr->children[0]->children[0]->name);
-            /* 
-             * Don't perform beta-reduction, just set body as control string.
-             * The argument has already been put into the environment.
-             */
-            TreeNode *tmp = state->closure->expr->children[0]->children[1];
-            /* 
-             * Detach body from its parent, and attach to a new parent.
-             */
-            state->closure->expr->children[0]->children[1] = NULL;
-            attachChild(state,tmp); /* attach to parent. */
-            // delete abstraction part, the other part will be deleted
-            // when delete the closure
-            deleteTree(state->closure->expr->children[0]);
-            // set body as control string
-            state->closure->expr = tmp;
-        }
-    }else if(state->closure->expr->kind==PrimiK) {
-        // only perform primitive operation if operands are constants
-        if(state->closure->expr->children[0]->kind==ConstK 
-            && state->closure->expr->children[1]->kind==ConstK) {
-            TreeNode* tmp  = evalPrimitive(state->closure->expr);
-            attachChild(state,tmp); /* attach to parent. */
-            /* 
-             * Second operand is kept in an environment and it will be
-             * deleted when delete the environment. So only need to delete
-             * first operand here.
-             */
-            deleteTree(state->closure->expr->children[0]);
-            state->closure->expr = NULL;
-            cek_deleteClosure(state->closure);
-            state->closure = cek_newClosure(tmp,NULL);
-        } else {
-            fprintf(errOut, "Error: %s can only be applied on constants.\n", state->closure->expr->name);
-            // delete first operand, the other operand will be deleted
-            // when delete the closure
-            deleteTree(state->closure->expr->children[0]);
-            return 0;
-        }
-    }else {
-        fprintf(errOut,"Error: Cannot evaluate unkown expression kind.\n");
-        return 0;
-    }
-    return 1;
-}
-
 /*
  * Lookup closure by name in the environment or its parent.
  */
@@ -395,23 +351,4 @@ static TreeNode* resolveFreeVariables(TreeNode *expr, Environment *env) {
     }
     vs_deleteVarSetList(list);
     return result;
-}
-
-/* 
- * A new expression may be created after evaluating the control string,
- * so need to attach the new expression to the old one's parent. This
- * function determines whether to attach it as left or right child by 
- * checking the type of top continuation. If the top continuation is NULL, 
- * it does nothing.
- */
-static void attachChild(const State *state, TreeNode *expr) {
-    if(state->continuation!=NULL) {
-        if(state->continuation->tag==ArgKK
-            || state->continuation->tag==OpdKK) {
-            state->continuation->closure->expr->children[0] = expr;
-        }else if(state->continuation->tag==FunKK
-            || state->continuation->tag==OprKK) {
-            state->continuation->closure->expr->children[1] = expr;
-        }
-    }
 }
