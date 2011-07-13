@@ -17,12 +17,35 @@ static Closure* lookupVariable(const char *name, Environment *env);
 static TreeNode* resolveFreeVariables(TreeNode *expr, Environment *env);
 static VarSet * FV(TreeNode *expr);
 static TreeNode *substitute(TreeNode *expr, TreeNode *var, TreeNode *sub);
+static int _evaluate(State *state);
+static Environment *buildGlobalEnvironment();
+
 
 TreeNode * evaluate(TreeNode *expr) {
-    State * state = cek_newState();
-    state->closure = cek_newClosure(expr,NULL);
+    Environment *globalEnv = buildGlobalEnvironment();
+    State *state = cek_newState();
+    state->closure = cek_newClosure(expr,globalEnv);
 
-    int error = 0;
+    TreeNode* result = NULL;
+    if(_evaluate(state)) {
+        // The result control string may contain free variables, need to 
+        // substitute them using the environment for it.
+        TreeNode *tmp = resolveFreeVariables(state->closure->expr,state->closure->env);
+        if(tmp!=NULL) {
+            // actually, tmp and state->closure->expr are the same expression
+            result = tmp;
+            state->closure->expr = NULL;
+        }
+    }
+    cek_cleanup(state);
+    return result;
+}
+
+/* 
+ * Evaluates the expression in the state. 
+ * Returns 1 if success, otherwise returns 0.
+ */
+static int _evaluate(State *state) {
     Continuation * ctn = NULL;
     Closure *closure = NULL;
     Environment *env = NULL;
@@ -35,8 +58,7 @@ TreeNode * evaluate(TreeNode *expr) {
                 TreeNode* fun = resolveFunction(state->closure->expr->name);
                 if(fun==NULL) {
                     fprintf(errOut, "Error: %s is not a defined variable or function.\n", state->closure->expr->name);
-                    error = 1;
-                    break;
+                    return 0;
                 }
                 // Replace the function name with function definition
                 deleteTreeNode(state->closure->expr);
@@ -54,31 +76,19 @@ TreeNode * evaluate(TreeNode *expr) {
                 state->closure = closure;
             }
         } else if(isValue(state->closure->expr)) {
-            if(state->continuation==NULL) {
-                // if the control string is an abstraction, need to substitute
-                // free variables in it using the environment for it.
-                TreeNode *tmp = resolveFreeVariables(state->closure->expr,state->closure->env);
-                if(tmp==NULL) {
-                    error = 1;
-                }else {
-                    state->closure->expr = tmp;
-                }
-                break;
-            } else if(state->continuation->tag==ArgKK) {
+            if(state->continuation->tag==ArgKK) {
                 if(state->closure->expr->kind==ConstK) {
                     fprintf(errOut, "Error: cannot apply a constant to any argument.\n");
                     fprintf(errOut, "Expression:\t");
                     printExpression(state->closure->expr,errOut);
                     fprintf(errOut,"\n");
-                    error = 1;
-                    break;
+                    return 0;
                 }else if(state->closure->expr->kind==IdK) {
                     // find function from builtin and standard library
                     TreeNode* fun = resolveFunction(state->closure->expr->name);
                     if(fun==NULL) {
                         fprintf(errOut, "Error: %s is not a predefined function.\n", state->closure->expr->name);
-                        error = 1;
-                        break;
+                        return 0;
                     }
                     // replace the expression with function definition
                     deleteTreeNode(state->closure->expr);
@@ -113,8 +123,7 @@ TreeNode * evaluate(TreeNode *expr) {
                     cek_deleteContinuation(ctn);
                 } else {
                     fprintf(errOut, "Error: %s can only be applied on constants.\n", ctn->closure->expr->name);
-                    error = 1;
-                    break;
+                    return 0;
                 }
             } else if(state->continuation->tag==OpdKK) {
                 state->continuation->tag = OprKK;
@@ -129,8 +138,7 @@ TreeNode * evaluate(TreeNode *expr) {
                 state->continuation->closure->expr->children[1] = NULL;
             } else {
                 fprintf(errOut,"Error: Unknown continuation tag.\n");
-                error = 1;
-                break;
+                return 0;
             }
         } else if(state->closure->expr->kind==AppK) {
             ctn = cek_newContinuation(ArgKK);
@@ -150,13 +158,7 @@ TreeNode * evaluate(TreeNode *expr) {
         }
     }
 
-    TreeNode* result = NULL;
-    if(!error) {
-        result = state->closure->expr;
-        state->closure->expr = NULL;
-    }
-    cek_cleanup(state);
-    return result;
+    return 1;
 }
 
 TreeNode * alphaConversion(TreeNode *expr) {
@@ -308,6 +310,21 @@ static TreeNode* resolveFunction(const char* name) {
 static Closure* lookupVariable(const char *name, Environment *env) {
     if(env==NULL) return NULL;
     if(strcmp(name,env->name)==0) {
+        Closure *closure = env->closure;
+        if(closure->env!=NULL) {
+            // evaluates the expression in its environment
+            State *state = cek_newState();
+            state->closure = cek_newClosure(duplicateTree(closure->expr),cek_newEnvironment("",cek_newClosure(NULL,NULL),closure->env));
+
+            if(_evaluate(state)) {
+                deleteTree(closure->expr);
+                cek_deleteClosure(closure);
+                // save the evaluated result
+                env->closure = cek_newClosure(state->closure->expr,state->closure->env);
+                state->closure->expr = NULL;
+            }
+            cek_cleanup(state);
+        } 
         return env->closure;
     }
     return lookupVariable(name,env->parent);
@@ -327,6 +344,12 @@ static TreeNode* resolveFreeVariables(TreeNode *expr, Environment *env) {
     Closure *closure = NULL;
     VarSetList *l = list;
     while(l!=NULL) {
+        TreeNode *fun = resolveFunction(l->name);
+        if(fun!=NULL) { // builtin and standard functions are not FV
+            deleteTree(fun);
+            l = l->next;
+            continue;
+        }
         closure = lookupVariable(l->name,env);
         if(closure==NULL) {
             fprintf(errOut,"Error: Variable %s is not defined.\n",l->name);
@@ -347,4 +370,23 @@ static TreeNode* resolveFreeVariables(TreeNode *expr, Environment *env) {
     }
     vs_deleteVarSetList(list);
     return result;
+}
+
+static Environment *buildGlobalEnvironment() {
+    Environment *ret = NULL;
+    int size = 0;
+    BuiltinFun *funs = builtinFuns(&size);
+    int i;
+    for(i=0;i<size;i++) {
+        BuiltinFun fun = funs[i];
+        ret = cek_newEnvironment(fun.name,cek_newClosure((fun.expandFun)(),NULL),ret);
+    }
+
+    StandardFun *stdFuns = standardFuns(&size);
+    for(i=0;i<size;i++) {
+        StandardFun fun = stdFuns[i];
+        ret = cek_newEnvironment(fun.name,cek_newClosure(expandStandardFun(&fun),NULL),ret);
+    }
+
+    return ret;
 }

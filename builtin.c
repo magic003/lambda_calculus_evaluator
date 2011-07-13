@@ -109,3 +109,7 @@ BuiltinFun* lookupBuiltinFun(const char* name) {
     return NULL;
 }
 
+BuiltinFun* builtinFuns(int *size) {
+    *size = FUNCTION_NUM;
+    return builtinFunctions;
+}

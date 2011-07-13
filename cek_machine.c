@@ -75,6 +75,7 @@ Closure* cek_newClosure(TreeNode *expr, Environment *env) {
 }
 
 void cek_deleteClosure(Closure *closure) {
+    if(closure==NULL)  return;
     if(closure->env!=NULL) {
         closure->env->refCount -= 1;
         if(closure->env->refCount==0) {
@@ -98,8 +99,10 @@ void cek_deleteContinuation(Continuation* continuation) {
 
 void cek_cleanup(State* state) {
     // delete the current closure
-    deleteTree(state->closure->expr);
-    cek_deleteClosure(state->closure);
+    if(state->closure!=NULL) {
+        deleteTree(state->closure->expr);
+        cek_deleteClosure(state->closure);
+    }
     // delete all continuations
     Continuation* ctn = NULL;
     while((ctn=state->continuation)!=NULL) {
@@ -113,6 +116,5 @@ void cek_cleanup(State* state) {
 }
 
 int cek_canTerminate(State* state) {
-    return isValue(state->closure->expr) && state->continuation==NULL
-        && (state->closure->expr->kind==ConstK || state->closure->env==NULL);
+    return isValue(state->closure->expr) && state->continuation==NULL;
 }

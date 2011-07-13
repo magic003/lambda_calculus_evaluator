@@ -60,7 +60,8 @@ exprs=("x" "X" "(lambda x x)" "(lambda x y)"
                 "Y (lambda t (lambda n (= n 1) 1 (+ n (t (- n 1))))) 4" 
                 "Y (lambda t (lambda n (or (= n 1) (= n 2)) 1 (+ (t (- n 1)) (t (- n 2))))) 7" 
                 "(and (not (= 2 3)) (= 2 2))" 
-                "(or (= 1 1) ((lambda x x x) (lambda x x x)))")
+                "(or (= 1 1) ((lambda x x x) (lambda x x x)))"
+                "(lambda a a a) ((lambda x x) (lambda y y))")
 
 ERROR_CODE=5
 for expr in "${exprs[@]}"
