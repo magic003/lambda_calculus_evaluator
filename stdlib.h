@@ -17,4 +17,7 @@ StandardFun* lookupStandardFun(const char* name);
 
 /* Expand the standard function to a tree. */
 TreeNode* expandStandardFun(StandardFun* fun);
+
+/* Get all standard functions. */
+StandardFun* standardFuns(int *size);
 #endif

@@ -18,4 +18,7 @@ typedef struct BuiltinFunStructure {
 
 /* Look for builtin function by name. */
 BuiltinFun* lookupBuiltinFun(const char* name);
+
+/* Get all builtin functions. */
+BuiltinFun* builtinFuns(int *size);
 #endif
