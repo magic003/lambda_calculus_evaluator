@@ -40,4 +40,5 @@ extern int yylex(void);
 extern void useStringBuffer(const char*);
 extern void deleteStringBuffer();
 extern int yyparse();
+extern int yylex_destroy(void);
 #endif
