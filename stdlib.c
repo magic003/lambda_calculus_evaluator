@@ -33,3 +33,8 @@ TreeNode* expandStandardFun(StandardFun* fun) {
     deleteStringBuffer();
     return tree;
 }
+
+StandardFun* standardFuns(int *size) {
+    *size = FUNCTION_NUM;
+    return standardFunctions;
+}

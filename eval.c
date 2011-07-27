@@ -12,15 +12,15 @@
 #include "cek_machine.h"
 #include "eval.h"
 
-static TreeNode* resolveFunction(const char* name);
 static Closure* lookupVariable(const char *name, Environment *env);
 static TreeNode* resolveFreeVariables(TreeNode *expr, Environment *env);
 static VarSet * FV(TreeNode *expr);
 static TreeNode *substitute(TreeNode *expr, TreeNode *var, TreeNode *sub);
+static Environment *buildGlobalEnvironment();
 
 TreeNode * evaluate(TreeNode *expr) {
     State * state = cek_newState();
-    state->closure = cek_newClosure(expr,NULL);
+    state->closure = cek_newClosure(expr,buildGlobalEnvironment());
 
     int error = 0;
     Continuation * ctn = NULL;
@@ -31,16 +31,9 @@ TreeNode * evaluate(TreeNode *expr) {
             // Find mapped closure from the evironment
             closure = lookupVariable(state->closure->expr->name,state->closure->env);
             if(closure==NULL) {
-                // find function from builtin and standard library
-                TreeNode* fun = resolveFunction(state->closure->expr->name);
-                if(fun==NULL) {
-                    fprintf(errOut, "Error: %s is not a defined variable or function.\n", state->closure->expr->name);
-                    error = 1;
-                    break;
-                }
-                // Replace the function name with function definition
-                deleteTreeNode(state->closure->expr);
-                state->closure->expr = fun;
+                fprintf(errOut, "Error: %s is not a defined variable or function.\n", state->closure->expr->name);
+                error = 1;
+                break;
             } else {
                 /*
                  * Should not use the found closure directly, because it will
@@ -73,16 +66,7 @@ TreeNode * evaluate(TreeNode *expr) {
                     error = 1;
                     break;
                 }else if(state->closure->expr->kind==IdK) {
-                    // find function from builtin and standard library
-                    TreeNode* fun = resolveFunction(state->closure->expr->name);
-                    if(fun==NULL) {
-                        fprintf(errOut, "Error: %s is not a predefined function.\n", state->closure->expr->name);
-                        error = 1;
-                        break;
-                    }
-                    // replace the expression with function definition
-                    deleteTreeNode(state->closure->expr);
-                    state->closure->expr = fun;
+                    // should never happen
                 } else {
                     // pop the continuation
                     ctn = state->continuation;
@@ -290,18 +274,6 @@ static TreeNode *substitute(TreeNode *expr, TreeNode *var, TreeNode *sub) {
     return expr;
 }
 
-/* Search a function in builtin library and standard library by name. */
-static TreeNode* resolveFunction(const char* name) {
-    BuiltinFun* fun = NULL;
-    StandardFun* stdFun = NULL;
-    if((fun=lookupBuiltinFun(name))!=NULL) {
-        return (fun->expandFun)();
-    } else if((stdFun=lookupStandardFun(name))!=NULL) {
-        return expandStandardFun(stdFun);
-    }
-    return NULL;
-}
-
 /*
  * Lookup closure by name in the environment or its parent.
  */
@@ -347,4 +319,23 @@ static TreeNode* resolveFreeVariables(TreeNode *expr, Environment *env) {
     }
     vs_deleteVarSetList(list);
     return result;
+}
+
+static Environment *buildGlobalEnvironment() {
+    Environment *ret = NULL;
+    int size = 0;
+    BuiltinFun *funs = builtinFuns(&size);
+    int i;
+    for(i=0;i<size;i++) {
+        BuiltinFun fun = funs[i];
+        ret = cek_newEnvironment(fun.name,cek_newClosure((fun.expandFun)(),NULL),ret);
+    }
+
+    StandardFun *stdFuns = standardFuns(&size);
+    for(i=0;i<size;i++) {
+        StandardFun fun = stdFuns[i];
+        ret = cek_newEnvironment(fun.name,cek_newClosure(expandStandardFun(&fun),NULL),ret);
+    }
+
+    return ret;
 }
